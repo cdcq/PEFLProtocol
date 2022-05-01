@@ -1,9 +1,9 @@
-import json
 from random import random
 
 from base_service import BaseService
 from connector import Connector
 from enums import PROTOCOLS
+from helpers import send_obj, receive_obj
 from key_generator import KeyRequester
 
 
@@ -13,9 +13,9 @@ class ServiceProvider(BaseService, KeyRequester):
                  token_path: str,
                  model_length: int, model_range: (int, int),
                  trainers_count: int, train_round: int,
-                 time_out=10, max_receive=1024, max_connection=5, ):
+                 time_out=10, max_connection=5):
         BaseService.__init__(self, listening, cert_path, key_path,
-                             time_out, max_receive, max_connection)
+                             time_out, max_connection)
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.cloud_provider = cloud_provider
@@ -46,8 +46,7 @@ class ServiceProvider(BaseService, KeyRequester):
         ready_list = []
         while len(ready_list) < self.trainers_count:
             sock, address = self.sock.accept()
-            msg = sock.recv(1024)
-            msg = json.loads(msg)
+            msg = receive_obj(sock)
             if msg['Protocol'] != PROTOCOLS.ROUND_READY \
                     or msg['User'] in ready_list:
                 sock.close()
@@ -59,16 +58,11 @@ class ServiceProvider(BaseService, KeyRequester):
                 'Protocol': PROTOCOLS.ROUND_READY,
                 'Data': len(ready_list)  # This is the id for this user.
             }
-            sock.send(json.dumps(msg).encode())
+            send_obj(sock, msg)
 
             # TODO: ciphertext packing.
-            msg = sock.recv(self.model_length * 2100 + 1024)
-            msg = json.loads(msg)
+            msg = receive_obj(sock)
 
             self.gradient[msg['ID']] = msg['Data']
 
-            msg = {
-                'Protocol': PROTOCOLS.ROUND_READY,
-                'Data': 'OK'
-            }
-            sock.send(json.dumps(msg).encode())
+            send_obj(sock, msg)

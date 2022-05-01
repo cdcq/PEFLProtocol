@@ -5,10 +5,9 @@ from time import sleep
 
 class Connector:
     def __init__(self, service: (str, int), ca_path: str,
-                 time_out=10, max_receive=1024):
+                 time_out=10):
         self.service = service
         self.time_out = time_out
-        self.max_receive = max_receive
 
         self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         self.context.load_verify_locations(ca_path)

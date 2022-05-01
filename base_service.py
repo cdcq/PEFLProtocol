@@ -5,7 +5,7 @@ import threading
 
 class BaseService:
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
-                 time_out=10, max_receive=1024, max_connection=5):
+                 time_out=10, max_connection=5):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(listening)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -13,7 +13,6 @@ class BaseService:
         self.sock = context.wrap_socket(sock, server_side=True)
 
         self.time_out = time_out
-        self.max_receive = max_receive
         self.max_connection = max_connection
 
     def run(self):

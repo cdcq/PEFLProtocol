@@ -1,4 +1,3 @@
-import json
 import ssl
 import yaml
 from phe import paillier
@@ -6,15 +5,16 @@ from phe import paillier
 from base_service import BaseService
 from connector import Connector
 from enums import PROTOCOLS
+from helpers import send_obj, receive_obj
 
 
 class KeyGenerator(BaseService):
 
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
-                 time_out=10, max_receive=1024, max_connection=5,
-                 users_path='config/user_list.yaml'):
+                 users_path: str,
+                 time_out=10, max_connection=5):
         BaseService.__init__(self, listening, cert_path, key_path,
-                             time_out, max_receive, max_connection)
+                             time_out, max_connection)
 
         # Very slow operation !!!
         self.pkx, self.skx = paillier.generate_paillier_keypair()
@@ -31,13 +31,7 @@ class KeyGenerator(BaseService):
         print('Start a connection.')
         sock.settimeout(self.time_out)
 
-        msg = sock.recv(self.max_receive)
-        try:
-            msg = json.loads(msg)
-        except json.decoder.JSONDecodeError:
-            sock.close()
-            print('The data structure is wrong.')
-            return
+        msg = receive_obj(sock)
         if 'Protocol' not in msg or 'Token' not in msg or 'User' not in msg:
             sock.close()
             print('The protocol is wrong.')
@@ -52,7 +46,7 @@ class KeyGenerator(BaseService):
             return
 
         user_right = users_list[msg['User']]['Right']
-        # 01b is available for skx amd 10b is available for skc.
+        # 01b is available for skx and 10b is available for skc.
 
         protocol = msg['Protocol']
 
@@ -63,8 +57,7 @@ class KeyGenerator(BaseService):
         elif protocol == PROTOCOLS.GET_SKC and (user_right & 2) > 0:
             send_key(sock, protocol, (self.skc.p, self.skc.q))
 
-        msg = sock.recv(1024)
-        msg = json.loads(msg)
+        msg = receive_obj(sock)
         if msg['Data'] == 'OK':
             sock.close()
             print('Closed a connection.')
@@ -77,7 +70,7 @@ def send_key(sock: ssl.SSLSocket, protocol, key):
         'Protocol': protocol,
         'Data': key
     }
-    sock.send(json.dumps(msg).encode())
+    send_obj(sock, msg)
 
 
 class KeyRequester:
@@ -98,10 +91,9 @@ class KeyRequester:
         }
 
         conn = self.key_generator.start_connect()
-        conn.send(json.dumps(msg).encode())
+        send_obj(conn, msg)
 
-        msg = conn.recv(self.key_generator.max_receive)
-        msg = json.loads(msg)
+        msg = receive_obj(conn)
 
         if protocol == PROTOCOLS.GET_PKC or protocol == PROTOCOLS.GET_PKX:
             ret = paillier.PaillierPublicKey(msg['Data'])
@@ -115,5 +107,5 @@ class KeyRequester:
             'Protocol': protocol,
             'Data': 'OK'
         }
-        conn.send(json.dumps(msg).encode())
+        send_obj(conn, msg)
         return ret

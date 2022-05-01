@@ -1,4 +1,3 @@
-import json
 import numpy
 from hashlib import md5
 from random import getrandbits
@@ -6,6 +5,7 @@ from time import sleep
 
 from connector import Connector
 from enums import PROTOCOLS
+from helpers import send_obj, receive_obj
 from key_generator import KeyRequester
 
 
@@ -42,17 +42,16 @@ class Trainer(KeyRequester):
             'Protocol': PROTOCOLS.ROUND_READY,
             'User': self.user_name
         }
-        conn.send(json.dumps(msg).encode())
+        send_obj(conn, msg)
         while True:
             try:
-                msg = conn.recv(1024)
+                msg = receive_obj(conn)
             except TimeoutError:
                 sleep(2)
                 continue
 
             break
 
-        msg = json.loads(msg)
         self.round_id = msg['Data']
 
         msg = {
@@ -60,10 +59,9 @@ class Trainer(KeyRequester):
             'ID': self.round_id,
             'Data': self.gradient
         }
-        conn.send(json.dumps(msg).encode())
+        send_obj(conn, msg)
 
-        msg = conn.recv(1024)
-        msg = json.loads(msg)
+        msg = receive_obj(conn)
         if msg['Data'] == 'OK':
             conn.close()
             print('The round is ready. Round ID: {0}.'.format(self.round_id))

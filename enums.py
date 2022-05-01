@@ -8,3 +8,5 @@ class PROTOCOLS(Enum):
     GET_SKC = auto()
 
     ROUND_READY = auto()
+
+    SEC_MED = auto()

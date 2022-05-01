@@ -1,4 +1,5 @@
-from random import random
+from phe import paillier
+from random import random, getrandbits
 
 from base_service import BaseService
 from connector import Connector
@@ -45,11 +46,11 @@ class ServiceProvider(BaseService, KeyRequester):
 
         ready_list = []
         while len(ready_list) < self.trainers_count:
-            sock, address = self.sock.accept()
-            msg = receive_obj(sock)
+            conn, address = self.sock.accept()
+            msg = receive_obj(conn)
             if msg['Protocol'] != PROTOCOLS.ROUND_READY \
                     or msg['User'] in ready_list:
-                sock.close()
+                conn.close()
                 continue
 
             ready_list.append(msg['User'])
@@ -58,11 +59,42 @@ class ServiceProvider(BaseService, KeyRequester):
                 'Protocol': PROTOCOLS.ROUND_READY,
                 'Data': len(ready_list)  # This is the id for this user.
             }
-            send_obj(sock, msg)
+            send_obj(conn, msg)
 
-            # TODO: ciphertext packing.
-            msg = receive_obj(sock)
+            msg = receive_obj(conn)
 
             self.gradient[msg['ID']] = msg['Data']
 
-            send_obj(sock, msg)
+            send_obj(conn, msg)
+
+    def medians_protocol(self) -> [paillier.EncryptedNumber]:
+        conn = self.cloud_provider.start_connect()
+        msg = {
+            'Protocol': PROTOCOLS.SEC_MED
+        }
+        send_obj(conn, msg)
+
+        msg = receive_obj(conn)
+
+        m, n = self.trainers_count, self.model_length
+        # Attention, if this number will overflow after plus?
+        r = [self.pkc.encrypt(getrandbits(2048)) for _ in range(n)]
+        r1 = [[(self.gradient[i][j] + r[j]).ciphertext() for j in range(n)] for i in range(m)]
+
+        msg = {
+            'Protocol': PROTOCOLS.SEC_MED,
+            'Data': r1
+        }
+        send_obj(conn, msg)
+
+        msg = receive_obj(conn)
+        dc = [paillier.EncryptedNumber(self.pkc, msg['Data'][i]) for i in range(n)]
+        gm = [dc[i] - r[i] for i in range(n)]
+
+        msg = {
+            'Protocol': PROTOCOLS.SEC_MED,
+            'Data': 'OK'
+        }
+        send_obj(conn, msg)
+
+        return gm

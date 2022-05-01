@@ -1,11 +1,11 @@
-import numpy
+from phe import paillier
 from hashlib import md5
 from random import getrandbits
 from time import sleep
 
 from connector import Connector
 from enums import PROTOCOLS
-from helpers import send_obj, receive_obj
+from helpers import send_obj, receive_obj, arr_enc
 from key_generator import KeyRequester
 
 
@@ -13,26 +13,24 @@ class Trainer(KeyRequester):
     def __init__(self, key_generator: Connector, service_provider: Connector,
                  token_path: str,
                  model_length: int,
-                 exponent: int = 32):
+                 precision: int = 32):
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.service_provider = service_provider
         self.model_length = model_length
-        self.exponent = exponent
+        self.precision = precision
 
         self.pkc = self.request_key(PROTOCOLS.GET_PKC)
         self.skx = self.request_key(PROTOCOLS.GET_SKX)
 
         self.user_name = md5(getrandbits(1024)).hexdigest()
         self.round_id = -1
-        self.gradient = [0 for _ in range(self.model_length)]
+        self.gradient, _ = arr_enc([0 for _ in range(self.model_length)], self.pkc)
 
-    def round_run(self, gradient: numpy.ndarray):
+    def round_run(self, gradient: [float]):
         print('A new round is started. User name: {0}.'.format(self.user_name))
         self.round_id = -1
-        # TODO: ciphertext packing.
-        self.gradient = [int(gradient[i] * (2 ** self.exponent))
-                         for i in range(self.model_length)]
+        self.gradient, _ = arr_enc(gradient, self.pkc, self.precision)
 
         self.round_ready()
 
@@ -57,7 +55,7 @@ class Trainer(KeyRequester):
         msg = {
             'Protocol': PROTOCOLS.ROUND_READY,
             'ID': self.round_id,
-            'Data': self.gradient
+            'Data': [i.ciphertext() for i in self.gradient]
         }
         send_obj(conn, msg)
 

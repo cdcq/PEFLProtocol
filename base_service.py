@@ -19,10 +19,10 @@ class BaseService:
         self.sock.listen(self.max_connection)
         print('Waiting for connection.')
         while True:
-            sock, address = self.sock.accept()
-            t = threading.Thread(target=self.tcp_handler, args=(sock, address))
+            conn, address = self.sock.accept()
+            t = threading.Thread(target=self.tcp_handler, args=(conn, address))
             t.start()
 
-    def tcp_handler(self, sock: ssl.SSLSocket, address):
-        sock.settimeout(self.time_out)
-        sock.close()
+    def tcp_handler(self, conn: ssl.SSLSocket, address):
+        conn.settimeout(self.time_out)
+        conn.close()

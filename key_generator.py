@@ -22,26 +22,22 @@ class KeyGenerator(BaseService):
 
         self.users_path = users_path
 
-    def tcp_handler(self, sock: ssl.SSLSocket, address):
+    def tcp_handler(self, conn: ssl.SSLSocket, address):
         self.pkx: paillier.PaillierPublicKey
         self.skx: paillier.PaillierPrivateKey
         self.pkc: paillier.PaillierPublicKey
         self.skc: paillier.PaillierPrivateKey
 
         print('Start a connection.')
-        sock.settimeout(self.time_out)
+        conn.settimeout(self.time_out)
 
-        msg = receive_obj(sock)
-        if 'Protocol' not in msg or 'Token' not in msg or 'User' not in msg:
-            sock.close()
-            print('The protocol is wrong.')
-            return
+        msg = receive_obj(conn)
 
         with open(self.users_path, 'r') as f:
             users_data = f.read()
         users_list = yaml.safe_load(users_data)
         if msg['User'] not in users_list or users_list[msg['User']]['Token'] != msg['Token']:
-            sock.close()
+            conn.close()
             print('The user info is wrong.')
             return
 
@@ -51,26 +47,26 @@ class KeyGenerator(BaseService):
         protocol = msg['Protocol']
 
         if protocol == PROTOCOLS.GET_PKX or protocol == PROTOCOLS.GET_PKC:
-            send_key(sock, protocol, self.pkx.n)
+            send_key(conn, protocol, self.pkx.n)
         elif protocol == PROTOCOLS.GET_SKX and (user_right & 1) > 0:
-            send_key(sock, protocol, (self.skx.p, self.skx.q))
+            send_key(conn, protocol, (self.skx.p, self.skx.q))
         elif protocol == PROTOCOLS.GET_SKC and (user_right & 2) > 0:
-            send_key(sock, protocol, (self.skc.p, self.skc.q))
+            send_key(conn, protocol, (self.skc.p, self.skc.q))
 
-        msg = receive_obj(sock)
+        msg = receive_obj(conn)
         if msg['Data'] == 'OK':
-            sock.close()
+            conn.close()
             print('Closed a connection.')
         else:
             print('A protocol ended incorrectly. Protocol ID: {0}.'.format(protocol))
 
 
-def send_key(sock: ssl.SSLSocket, protocol, key):
+def send_key(conn: ssl.SSLSocket, protocol, key):
     msg = {
         'Protocol': protocol,
         'Data': key
     }
-    send_obj(sock, msg)
+    send_obj(conn, msg)
 
 
 class KeyRequester:

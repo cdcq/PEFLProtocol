@@ -4,7 +4,7 @@ from phe import paillier
 
 from base_service import BaseService
 from connector import Connector
-from enums import PROTOCOLS
+from enums import Protocols, MessageItems
 from helpers import send_obj, receive_obj
 
 
@@ -36,25 +36,27 @@ class KeyGenerator(BaseService):
         with open(self.users_path, 'r') as f:
             users_data = f.read()
         users_list = yaml.safe_load(users_data)
-        if msg['User'] not in users_list or users_list[msg['User']]['Token'] != msg['Token']:
+        user_id = msg[MessageItems.USER]
+        if user_id not in users_list \
+                or users_list[user_id]['Token'] != msg[MessageItems.TOKEN]:
             conn.close()
             print('The user info is wrong.')
             return
 
-        user_right = users_list[msg['User']]['Right']
+        user_right = users_list[user_id]['Right']
         # 01b is available for skx and 10b is available for skc.
 
-        protocol = msg['Protocol']
+        protocol = msg[MessageItems.PROTOCOL]
 
-        if protocol == PROTOCOLS.GET_PKX or protocol == PROTOCOLS.GET_PKC:
+        if protocol == Protocols.GET_PKX or protocol == Protocols.GET_PKC:
             send_key(conn, protocol, self.pkx.n)
-        elif protocol == PROTOCOLS.GET_SKX and (user_right & 1) > 0:
+        elif protocol == Protocols.GET_SKX and (user_right & 1) > 0:
             send_key(conn, protocol, (self.skx.p, self.skx.q))
-        elif protocol == PROTOCOLS.GET_SKC and (user_right & 2) > 0:
+        elif protocol == Protocols.GET_SKC and (user_right & 2) > 0:
             send_key(conn, protocol, (self.skc.p, self.skc.q))
 
         msg = receive_obj(conn)
-        if msg['Data'] == 'OK':
+        if msg[MessageItems.DATA] == 'OK':
             conn.close()
             print('Closed a connection.')
         else:
@@ -63,8 +65,8 @@ class KeyGenerator(BaseService):
 
 def send_key(conn: ssl.SSLSocket, protocol, key):
     msg = {
-        'Protocol': protocol,
-        'Data': key
+        MessageItems.PROTOCOL: protocol,
+        MessageItems.DATA: key
     }
     send_obj(conn, msg)
 
@@ -81,9 +83,9 @@ class KeyRequester:
         token_data = yaml.safe_load(token_data)
 
         msg = {
-            'Protocol': protocol,
-            'User': token_data['User'],
-            'Token': token_data['Token']
+            MessageItems.PROTOCOL: protocol,
+            MessageItems.USER: token_data['User'],
+            MessageItems.TOKEN: token_data['Token']
         }
 
         conn = self.key_generator.start_connect()
@@ -91,17 +93,18 @@ class KeyRequester:
 
         msg = receive_obj(conn)
 
-        if protocol == PROTOCOLS.GET_PKC or protocol == PROTOCOLS.GET_PKX:
-            ret = paillier.PaillierPublicKey(msg['Data'])
-        elif protocol == PROTOCOLS.GET_SKC or protocol == PROTOCOLS.GET_SKX:
-            pub = paillier.PaillierPublicKey(msg['Data'][0] * msg['Data'][1])
-            ret = paillier.PaillierPrivateKey(pub, msg['Data'][0], msg['Data'][1])
+        data = msg[MessageItems.DATA]
+        if protocol == Protocols.GET_PKC or protocol == Protocols.GET_PKX:
+            ret = paillier.PaillierPublicKey(data)
+        elif protocol == Protocols.GET_SKC or protocol == Protocols.GET_SKX:
+            pub = paillier.PaillierPublicKey(data[0] * data[1])
+            ret = paillier.PaillierPrivateKey(pub, data[0], data[1])
         else:
             ret = None
 
         msg = {
-            'Protocol': protocol,
-            'Data': 'OK'
+            MessageItems.PROTOCOL: protocol,
+            MessageItems.DATA: 'OK'
         }
         send_obj(conn, msg)
         return ret

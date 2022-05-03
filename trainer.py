@@ -4,8 +4,8 @@ from random import getrandbits
 from time import sleep
 
 from connector import Connector
-from enums import PROTOCOLS
-from helpers import send_obj, receive_obj, arr_enc
+from enums import Protocols, MessageItems
+from helpers import send_obj, receive_obj, arr_enc, arr_dec
 from key_generator import KeyRequester
 
 
@@ -13,32 +13,34 @@ class Trainer(KeyRequester):
     def __init__(self, key_generator: Connector, service_provider: Connector,
                  token_path: str,
                  model_length: int,
-                 precision: int = 32):
+                 precision: int = 32,
+                 wait_time: int = 5):
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.service_provider = service_provider
         self.model_length = model_length
         self.precision = precision
+        self.wait_time = wait_time
 
-        self.pkc = self.request_key(PROTOCOLS.GET_PKC)
-        self.skx = self.request_key(PROTOCOLS.GET_SKX)
+        self.pkc = self.request_key(Protocols.GET_PKC)
+        self.skx = self.request_key(Protocols.GET_SKX)
 
         self.user_name = md5(getrandbits(1024)).hexdigest()
         self.round_id = -1
-        self.gradient, _ = arr_enc([0 for _ in range(self.model_length)], self.pkc)
+        self.gradient = []
 
     def round_run(self, gradient: [float]):
         print('A new round is started. User name: {0}.'.format(self.user_name))
         self.round_id = -1
-        self.gradient, _ = arr_enc(gradient, self.pkc, self.precision)
+        self.gradient = arr_enc(gradient, self.pkc, self.precision)
 
         self.round_ready()
 
     def round_ready(self):
         conn = self.service_provider.start_connect()
         msg = {
-            'Protocol': PROTOCOLS.ROUND_READY,
-            'User': self.user_name
+            MessageItems.PROTOCOL: Protocols.ROUND_READY,
+            MessageItems.USER: self.user_name
         }
         send_obj(conn, msg)
         while True:
@@ -50,18 +52,40 @@ class Trainer(KeyRequester):
 
             break
 
-        self.round_id = msg['Data']
+        self.round_id = msg[MessageItems.DATA]
 
         msg = {
-            'Protocol': PROTOCOLS.ROUND_READY,
-            'ID': self.round_id,
-            'Data': [i.ciphertext() for i in self.gradient]
+            MessageItems.PROTOCOL: Protocols.ROUND_READY,
+            MessageItems.ID: self.round_id,
+            MessageItems.DATA: [i.ciphertext() for i in self.gradient]
         }
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
-        if msg['Data'] == 'OK':
+        if msg[MessageItems.DATA] == 'OK':
             conn.close()
             print('The round is ready. Round ID: {0}.'.format(self.round_id))
         else:
             print('A round ready ended incorrectly. User name: {0}.'.format(self.user_name))
+
+    def get_mode(self) -> [float]:
+        sleep(self.wait_time)
+        conn = self.service_provider.start_connect()
+        msg = {
+            MessageItems.PROTOCOL: Protocols.GET_MODEL,
+            MessageItems.USER: self.user_name
+        }
+        send_obj(conn, msg)
+
+        msg = receive_obj(conn)
+        data = msg[MessageItems.DATA]
+        model = [paillier.EncryptedNumber(self.skx.public_key, data[i]) for i in range(len(data))]
+        ret = arr_dec(model, self.skx)
+
+        msg = {
+            MessageItems.PROTOCOL: Protocols.GET_MODEL,
+            MessageItems.DATA: 'OK'
+        }
+        send_obj(conn, msg)
+
+        return ret

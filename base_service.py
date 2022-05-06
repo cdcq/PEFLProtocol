@@ -1,3 +1,11 @@
+"""This is the base class for the function of server part in protocol.
+
+The class have a SSL context object to communicate. You do not have to provide the context object but
+just need to provide the socket that the server will listen. The class will create a new context object
+automatically. You also need to provide the certificate file and the private key file for SSL.
+
+"""
+
 import socket
 import ssl
 import threading
@@ -24,5 +32,9 @@ class BaseService:
             t.start()
 
     def tcp_handler(self, conn: ssl.SSLSocket, address):
+        """
+        This function will always be rewrote at sub classes.
+        """
+
         conn.settimeout(self.time_out)
         conn.close()

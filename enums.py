@@ -1,3 +1,10 @@
+"""This is a constant model
+
+The model contains some constants.
+
+"""
+
+
 from enum import Enum, auto
 
 

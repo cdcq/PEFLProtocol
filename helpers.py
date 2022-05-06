@@ -1,3 +1,24 @@
+"""This model provide many useful function
+
+The send and receive function can help programmer send a dictionary easily.
+The enc and dec function can help programmer encrypt/decrypt an array easily.
+
+
+Typical usage example:
+
+msg = {
+    foo: bar
+}
+send_obj(conn, msg)
+
+msg = receive_obj(conn)
+
+encrypted = arr_enc(plain, self.public_key)
+
+plain = arr_dec(encrypted, self.private_key)
+
+"""
+
 import json
 import ssl
 import struct

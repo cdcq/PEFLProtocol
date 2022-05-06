@@ -1,3 +1,16 @@
+"""This is connector model
+
+The connector class inherit the function that be used when connect to a server.
+
+Typical usage example:
+
+sock = Connector(service, ca_path)
+conn = sock.start_connect()
+conn.send(data)
+data = conn.recv()
+
+"""
+
 import socket
 import ssl
 from time import sleep

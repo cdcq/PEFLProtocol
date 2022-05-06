@@ -1,3 +1,19 @@
+"""This is the cloud provider part of the PEFL protocol
+
+The class is inherit base service class and key requester class, so it is able to listen TCP
+connection request and request key from the Key Generation Center.
+There are two points to notice. First is the key generator is a "Connector" object and you
+need to generate the object by your self.
+Second is that the run function is define at the base service class so you couldn't find it
+at this class. but you can just run the "run" function and the TCP listener will at work.
+
+Typical usage example:
+
+cp = CloudProvider(listening, cert_path, key_path, key_generator, token_path)
+cp.run()
+
+"""
+
 import math
 import numpy
 import ssl
@@ -29,6 +45,16 @@ class CloudProvider(BaseService, KeyRequester):
         self.dx = []
 
     def tcp_handler(self, conn: ssl.SSLSocket, address):
+        """
+
+        This function rewrite the function in super class, analysis the protocol of the
+        TCP request and chose the correct processing function.
+
+        :param conn: the TCP connection to be handled.
+        :param address: no use.
+        :return: None.
+        """
+
         conn.settimeout(self.time_out)
         print('Start a connection.')
         msg = receive_obj(conn)
@@ -49,6 +75,17 @@ class CloudProvider(BaseService, KeyRequester):
             print('A protocol ended incorrectly. Protocol ID: {0}.'.format(protocol))
 
     def clout_init(self, conn: ssl.SSLSocket):
+        """
+
+        This function make some initialization of the cloud provider before a train
+        round start.
+        The initialization is contained:
+            - Get the count of trainers.
+
+        :param conn: the TCP connection that be used to initialize.
+        :return: None.
+        """
+
         msg = {
             MessageItems.PROTOCOL: Protocols.CLOUD_INIT
         }
@@ -65,6 +102,16 @@ class CloudProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def medians_handler(self, conn: ssl.SSLSocket):
+        """
+
+        This function realize the "SecMed" procedure in the PEFL protocol.
+        The CP will get encrypted gradient vectors of every trainers from SP
+        and send a encrypted medians vector of these vectors to SP.
+
+        :param conn: the TCP connection that be used to make this procedure.
+        :return: None.
+        """
+
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED
         }
@@ -72,16 +119,19 @@ class CloudProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         r1 = msg[MessageItems.DATA]
+        # TODO: Get m and n by the length of the array is not a good idea.
         m, n = len(r1), len(r1[0])
 
         dc = [[paillier.EncryptedNumber(self.skc.public_key, r1[i][j])
                for j in range(n)] for i in range(m)]
         dx = [arr_dec(dc[i], self.skc, self.precision) for i in range(m)]
 
-        # Acceleration.
+        # Acceleration. The dx will use again at the aggregate procedure.
         self.dx = dx
 
         n = len(dx[0])  # Attention.
+        # Transpose the dx matrix. It is convenient for sorting the column vectors in
+        # matrix dx and then calculate the medians in a column vector.
         dt = [[dx[j][i] for j in range(m)] for i in range(n)]
 
         for i in range(n):
@@ -101,6 +151,17 @@ class CloudProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def pearson_handler(self, conn: ssl.SSLSocket):
+        """
+
+        This function realize the "SecPear" procedure in PEFL protocol.
+        The CP will get any one encrypted vector of the trainers and the encrypted median
+        vector from SP. Then It will calculate the correlation coefficient of them and save
+        the coefficient by itself.
+
+        :param conn: the TCP connection that be used to make this procedure.
+        :return: None.
+        """
+
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER
         }
@@ -119,6 +180,7 @@ class CloudProvider(BaseService, KeyRequester):
         rho = float(numpy.corrcoef(dx, dy)[0][1])
 
         small_number = 1e-6
+        # This is the weight formula mentioned in PEFL paper.
         self.mu[x_id] = max(0.0, math.log((1 + rho) / (1 - rho + small_number)) - 0.5)
 
         msg = {
@@ -127,6 +189,18 @@ class CloudProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def aggregate_handler(self, conn: ssl.SSLSocket):
+        """
+
+        This function realize the "SecAgg" procedure in PEFL protocol.
+        The CP will get the learning rate nu from SP and calculate the next round model using
+        the gradient saved at "SecMed" procedure. But the model is added noise so the CP send
+        the coefficient of the model vector to SP and SP will minus the noise by homomorphic
+        operation.
+
+        :param conn: the TCP connection that be used to make this procedure.
+        :return: None.
+        """
+
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG
         }
@@ -136,8 +210,10 @@ class CloudProvider(BaseService, KeyRequester):
         nu = msg[MessageItems.DATA]
 
         m = self.trainers_count
+        # "self.dx" is saved at the "medians_handler" function.
         n = len(self.dx[0])
         sum_mu = sum(self.mu)
+        # "k" is the aggregate formula mentioned in PEFL paper.
         k = [nu * self.mu[i] / (m * sum_mu) for i in range(m)]
         ex = [[k[i] * self.dx[i][j] for j in range(n)] for i in range(m)]
 
@@ -151,6 +227,16 @@ class CloudProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def exchange_handler(self, conn: ssl.SSLSocket):
+        """
+
+        This is the last procedure in PEFL protocol.
+        The SP get a model encrypted by public key c, encrypt this model by public key x and
+        then send back to SP.
+
+        :param conn: the TCP connection that be used to make this procedure.
+        :return: None.
+        """
+
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC
         }

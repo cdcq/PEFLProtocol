@@ -1,3 +1,19 @@
+"""This is the KGC model
+
+The key generator class provide key generation and distribution service.
+The key requester class provide key request function.
+
+
+Typical usage example:
+
+kgc = KeyGenerator(listening, cert_path, key_path, users_path)
+kgc.run()
+
+krq = KeyRequester(key_generator, token_path)
+public_key = krq.request_key(Protocols.GET_PKX)
+
+"""
+
 import ssl
 import yaml
 from phe import paillier
@@ -76,7 +92,7 @@ class KeyRequester:
         self.key_generator = key_generator
         self.token_path = token_path
 
-    def request_key(self, protocol) \
+    def request_key(self, protocol: Protocols) \
             -> paillier.PaillierPublicKey | paillier.PaillierPrivateKey:
         with open(self.token_path, 'r') as f:
             token_data = f.read()

@@ -3,7 +3,6 @@
 The key generator class provide key generation and distribution service.
 The key requester class provide key request function.
 
-
 Typical usage example:
 
 kgc = KeyGenerator(listening, cert_path, key_path, users_path)

@@ -1,3 +1,18 @@
+"""This model is for trainer machines (data owners)
+
+The trainer class can contact to the service provider, send the gradient vector and
+receive the next round model automatically. You just need to make a trainer object, then
+send the gradient vector and receive the model every round.
+
+Typical usage example:
+
+t = trainer(key_generator, service_provider, token_path, model_length)
+for i in range(round_count):
+    gradient = train(model)
+    model = t.round_run(gradient)
+
+"""
+
 from phe import paillier
 from hashlib import md5
 from random import getrandbits
@@ -29,12 +44,13 @@ class Trainer(KeyRequester):
         self.round_id = -1
         self.gradient = []
 
-    def round_run(self, gradient: [float]):
+    def round_run(self, gradient: [float]) -> [float]:
         print('A new round is started. User name: {0}.'.format(self.user_name))
         self.round_id = -1
         self.gradient = arr_enc(gradient, self.pkc, self.precision)
 
         self.round_ready()
+        return self.get_mode()
 
     def round_ready(self):
         conn = self.service_provider.start_connect()

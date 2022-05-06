@@ -1,3 +1,16 @@
+"""This is the service provider part of the PEFL protocol
+
+The class is inherit base service class and key requester class, so it is able to listen TCP
+connection request and request key from the Key Generation Center.
+
+Typical usage example:
+
+cp = ServiceProvider(listening, cert_path, key_path, key_generator, cloud_provider, token_path,
+                     model_length, model_range, learning_rate, trainers_count, train_round)
+cp.run()
+
+"""
+
 from phe import paillier
 from random import random, getrandbits
 
@@ -63,6 +76,14 @@ class ServiceProvider(BaseService, KeyRequester):
         print('A round finished.')
 
     def round_ready(self):
+        """
+
+        This function contact to every trainers, get their gradients and generate a
+        id in this round for them.
+
+        :return: None.
+        """
+
         self.sock.listen(1)
 
         ready_list = []
@@ -95,6 +116,14 @@ class ServiceProvider(BaseService, KeyRequester):
             send_obj(conn, msg)
 
     def cloud_init(self):
+        """
+
+        This function make some initialization of the cloud provider before a train
+        round start.
+
+        :return: None.
+        """
+
         conn = self.cloud_provider.start_connect()
         msg = {
             MessageItems.PROTOCOL: Protocols.CLOUD_INIT
@@ -120,6 +149,13 @@ class ServiceProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def medians_protocol(self) -> [paillier.EncryptedNumber]:
+        """
+
+        This function realize the "SecMed" procedure in the PEFL protocol.
+
+        :return: the medians vector or gradients.
+        """
+
         conn = self.cloud_provider.start_connect()
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED
@@ -156,6 +192,16 @@ class ServiceProvider(BaseService, KeyRequester):
 
     def pearson_protocol(self, gx: [paillier.EncryptedNumber], gy: [paillier.EncryptedNumber],
                          x_id: int):
+        """
+
+        This function realize the "SecPear" procedure in the PEFL protocol.
+
+        :param gx: the gradient vector of a trainer.
+        :param gy: the medians vector.
+        :param x_id: the round id of the trainer.
+        :return: None.
+        """
+
         conn = self.cloud_provider.start_connect()
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER
@@ -189,6 +235,13 @@ class ServiceProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def aggregate_protocol(self):
+        """
+
+        This function realize the "SecAgg" procedure in the PEFL protocol.
+
+        :return: None.
+        """
+
         conn = self.cloud_provider.start_connect()
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG
@@ -222,6 +275,13 @@ class ServiceProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def exchange_protocol(self):
+        """
+
+        This function realize the "SecExch" procedure in the PEFL protocol.
+
+        :return: the next round model encrypted by public key x.
+        """
+
         conn = self.cloud_provider.start_connect()
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC
@@ -250,6 +310,13 @@ class ServiceProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
     def distribute_model(self):
+        """
+
+        This function distribute the next round model to every trainer.
+
+        :return: None.
+        """
+
         self.sock.listen(1)
 
         distribute_list = []

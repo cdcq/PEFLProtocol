@@ -64,3 +64,39 @@ def arr_dec(cipher: [paillier.EncryptedNumber], private_key: paillier.PaillierPr
             precision=32) -> [float]:
     ret = [private_key.decrypt(i) / (2 ** precision) for i in cipher]
     return ret
+
+
+def yield_accumulated_grads(accumulated_grads):
+    for i in accumulated_grads:
+        yield i
+
+
+def flatten(generator) -> [float]:
+    """
+    Get a vector from generator whose element is a matrix of different shapes for different layers of model.
+    eg. model.parameters() and yield_accumulated_grads() will create a generator
+    for parameters and accumulated_grads
+    :param generator:
+    :return:
+    """
+
+    vector = []
+    for para in generator:
+        para_list = [i.item() for i in para.flatten()]
+        vector.extend(para_list)
+    return vector
+
+
+def de_flatten(vector: [float], model) -> None:
+    """
+    Use the vector which represents the weights of model to update the values of model.
+    :param vector:
+    :param model:
+    :return:
+    """
+    index = 0
+    for para in model.parameter():
+        shape = para.shape  # type(shape) is <class 'torch.Size'>, which is a subclass of <class 'tuple'>
+        prod_shape = reduce(lambda x, y: x * y, shape)
+        para = torch.tensor(vector[index: (index + prod_shape)]).reshape(shape).requires_grad_()
+        i

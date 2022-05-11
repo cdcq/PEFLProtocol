@@ -25,7 +25,7 @@ class ServiceProvider(BaseService, KeyRequester):
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
                  key_generator: Connector, cloud_provider: Connector,
                  token_path: str,
-                 model_length: int, model_range: (int, int), learning_rate: int,
+                 model_length: int, learning_rate: int,
                  trainers_count: int, train_round: int,
                  time_out=10, max_connection=5):
         BaseService.__init__(self, listening, cert_path, key_path,
@@ -36,7 +36,6 @@ class ServiceProvider(BaseService, KeyRequester):
         self.model_length = model_length
         self.trainers_count = trainers_count
         self.train_round = train_round
-        self.model_range = model_range
         self.learning_rate = learning_rate
 
         self.model = []
@@ -47,8 +46,7 @@ class ServiceProvider(BaseService, KeyRequester):
         self.pkc = self.request_key(Protocols.GET_PKC)
 
     def run(self):
-        self.model = [random() * (self.model_range[1] - self.model_range[0]) + self.model_range[0]
-                      for _ in range(self.model_length)]
+        # self.model = self.init_model()
         self.model = arr_enc(self.model, self.pkc)
 
         for round_number in range(1, self.train_round + 1):
@@ -326,6 +324,7 @@ class ServiceProvider(BaseService, KeyRequester):
             if msg[MessageItems.PROTOCOL] != Protocols.GET_MODEL \
                     or msg[MessageItems.USER] in distribute_list:
                 conn.close()
+                continue
 
             distribute_list.append(msg[MessageItems.USER])
 

@@ -5,26 +5,23 @@ The model contains some constants.
 """
 
 
-from enum import Enum, auto
+class Protocols:
+    GET_PKX = 'GetPKx'
+    GET_PKC = 'GetPKc'
+    GET_SKX = 'GetSKx'
+    GET_SKC = 'GetSKc'
+
+    ROUND_READY = 'RoundReady'
+    CLOUD_INIT = 'CloudInit'
+    GET_MODEL = 'GetModel'
+
+    SEC_MED = 'SecMed'
+    SEC_PER = 'SecPer'
+    SEC_AGG = 'SecAgg'
+    SEC_EXC = 'SecExc'
 
 
-class Protocols(Enum):
-    GET_PKX = auto()
-    GET_PKC = auto()
-    GET_SKX = auto()
-    GET_SKC = auto()
-
-    ROUND_READY = auto()
-    CLOUD_INIT = auto()
-    GET_MODEL = auto()
-
-    SEC_MED = auto()
-    SEC_PER = auto()
-    SEC_AGG = auto()
-    SEC_EXC = auto()
-
-
-class MessageItems(Enum):
+class MessageItems:
     PROTOCOL = "Protocol"
     DATA = "Data"
     USER = "User"

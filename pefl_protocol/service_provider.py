@@ -25,7 +25,7 @@ class ServiceProvider(BaseService, KeyRequester):
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
                  key_generator: Connector, cloud_provider: Connector,
                  token_path: str,
-                 model_length: int, learning_rate: int,
+                 model_length: int, learning_rate: float,
                  trainers_count: int, train_round: int,
                  time_out=10, max_connection=5):
         BaseService.__init__(self, listening, cert_path, key_path,

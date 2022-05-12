@@ -40,7 +40,7 @@ class Trainer(KeyRequester):
         self.pkc = self.request_key(Protocols.GET_PKC)
         self.skx = self.request_key(Protocols.GET_SKX)
 
-        self.user_name = md5(getrandbits(1024)).hexdigest()
+        self.user_name = md5(getrandbits(1024).to_bytes(1024, 'big')).hexdigest()
         self.round_id = -1
         self.gradient = []
 

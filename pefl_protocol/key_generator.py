@@ -19,7 +19,7 @@ from phe import paillier
 
 from base_service import BaseService
 from connector import Connector
-from enums import Protocols, MessageItems
+from consts import Protocols, MessageItems
 from helpers import send_obj, receive_obj
 
 

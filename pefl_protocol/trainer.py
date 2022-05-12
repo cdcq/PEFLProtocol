@@ -19,7 +19,7 @@ from random import getrandbits
 from time import sleep
 
 from connector import Connector
-from enums import Protocols, MessageItems
+from consts import Protocols, MessageItems
 from helpers import send_obj, receive_obj, arr_enc, arr_dec
 from key_generator import KeyRequester
 

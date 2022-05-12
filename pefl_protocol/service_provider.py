@@ -16,7 +16,7 @@ from random import random, getrandbits
 
 from base_service import BaseService
 from connector import Connector
-from enums import Protocols, MessageItems
+from consts import Protocols, MessageItems
 from helpers import send_obj, receive_obj, arr_enc, arr_enc_len
 from key_generator import KeyRequester
 

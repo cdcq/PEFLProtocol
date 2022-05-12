@@ -111,23 +111,18 @@ def run_service_provider():
 
 
 def run_edge():
-    print("1111")
     key_generator = Connector(service=KGC_ADDR_PORT,
                               ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt"))
     service_provider = Connector(service=SP_ADDR_PORT,
                                  ca_path=os.path.join(DIR_OF_AUTH, "sp.crt"))
-    print("2222")
     edge = Trainer(
         key_generator=key_generator,
         service_provider=service_provider,
         token_path=os.path.join(DIR_OF_AUTH, "token", "edge.yml"),
         model_length=MODEL_LENGTH,
     )
-    print("333")
     train_dataset = get_train_dataset(dataset="mnist", iid=True)
-    print("444")
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
-    print("5555")
     model = get_model(model_name="mlp", device=DEVICE)
     print("edge 正在启动")
     for _ in range(MAX_ROUND):

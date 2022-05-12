@@ -1,0 +1,9 @@
+CP:
+  Right: 2
+  Token: CP
+EDGE:
+  Right: 1
+  Token: EDGE
+SP:
+  Right: 0
+  Token: SP

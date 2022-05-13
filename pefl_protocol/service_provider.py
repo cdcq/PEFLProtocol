@@ -90,14 +90,18 @@ class ServiceProvider(BaseService, KeyRequester):
             msg = receive_obj(conn)
             if msg[MessageItems.PROTOCOL] != Protocols.ROUND_READY \
                     or msg[MessageItems.USER] in ready_list:
-                conn.close()
+                msg = {
+                    MessageItems.PROTOCOL: msg[MessageItems.PROTOCOL],
+                    MessageItems.DATA: 'Error'
+                }
+                send_obj(conn, msg)
                 continue
 
             ready_list.append(msg[MessageItems.USER])
 
             msg = {
                 MessageItems.PROTOCOL: Protocols.ROUND_READY,
-                MessageItems.DATA: len(ready_list)  # This is the id for this user.
+                MessageItems.DATA: len(ready_list) - 1  # This is the id for this user.
             }
             send_obj(conn, msg)
 
@@ -180,6 +184,7 @@ class ServiceProvider(BaseService, KeyRequester):
         dc = [paillier.EncryptedNumber(self.pkc, data[i]) for i in range(n)]
         gm = [dc[i] - r[i] for i in range(n)]
 
+        print('SecMed OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
             MessageItems.DATA: 'OK'
@@ -226,6 +231,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
 
+        print('SecPear OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER,
             MessageItems.DATA: 'OK'
@@ -266,6 +272,7 @@ class ServiceProvider(BaseService, KeyRequester):
             for j in range(n):
                 self.model[j] = self.model[j] + fx[i][j]
 
+        print('SecAgg OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: 'OK'
@@ -301,6 +308,7 @@ class ServiceProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
         self.model_x = msg[MessageItems.DATA]
 
+        print('SecExch OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
             MessageItems.DATA: 'OK'

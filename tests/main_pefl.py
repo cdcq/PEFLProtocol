@@ -104,7 +104,7 @@ def run_service_provider():
     )
     cloud_provider = Connector(
         service=CP_ADDR_PORT,
-        ca_path=os.path.join(DIR_OF_AUTH, "cp.crt")
+        ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt")
     )
     sp = ServiceProvider(
         listening=SP_ADDR_PORT,
@@ -129,7 +129,7 @@ def run_edge(edge_id: int):
     )
     service_provider = Connector(
         service=SP_ADDR_PORT,
-        ca_path=os.path.join(DIR_OF_AUTH, "sp.crt")
+        ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt")
     )
     edge = Trainer(
         key_generator=key_generator,
@@ -147,8 +147,36 @@ def run_edge(edge_id: int):
         grads_list, local_loss = local_update(model=model, dataloader=train_dataloader, device=DEVICE, lr=LEARNING_RATE)
         print("Round = {:>4d} local_loss = {:.4f}".format(i, local_loss))
         grads_vector = flatten(yield_accumulated_grads(grads_list))
-        weights_vector = edge.round_run(grads_vector)
-        # weights_vector = imitate_cloud.roud_run_in_plaintext(grads_vector=grads_vector)
+        # Normal run
+        # weights_vector = edge.round_run(gradient=grads_vector)
+        # Test pefl_protocol
+        weights_vector = edge.round_run(gradient=[.1]*10)
+        # Test ML code
+        # weights_vector = imitate_cloud.round_run_in_plaintext(grads_vector=grads_vector)
+        de_flatten(vector=weights_vector, model=model)
+
+
+def run_edge_test(edge_id: int):
+    key_generator = Connector(
+        service=KGC_ADDR_PORT,
+        ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt")
+    )
+    service_provider = Connector(
+        service=SP_ADDR_PORT,
+        ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt")
+    )
+    edge = Trainer(
+        key_generator=key_generator,
+        service_provider=service_provider,
+        token_path=os.path.join(DIR_OF_AUTH, "token", f"edge{edge_id}.yml"),
+        model_length=MODEL_LENGTH,
+    )
+
+    model = get_model(model_name="mlp", device=torch.device("cpu"))
+    print("edge 正在启动")
+
+    for i in range(MAX_ROUND):
+        weights_vector = edge.round_run(gradient=[.1]*10)
         de_flatten(vector=weights_vector, model=model)
 
 

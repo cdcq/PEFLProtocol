@@ -48,10 +48,9 @@ class Trainer(KeyRequester):
         print('A new round is started. User name: {0}.'.format(self.user_name))
         self.round_id = -1
         self.gradient = arr_enc(gradient, self.pkc, self.precision)
-        print("1111")
 
         self.round_ready()
-        return self.get_mode()
+        return self.get_model()
 
     def round_ready(self):
         conn = self.service_provider.start_connect()
@@ -85,17 +84,21 @@ class Trainer(KeyRequester):
         else:
             print('A round ready ended incorrectly. User name: {0}.'.format(self.user_name))
 
-    def get_mode(self) -> [float]:
+    def get_model(self) -> [float]:
         sleep(self.wait_time)
-        conn = self.service_provider.start_connect()
-        msg = {
-            MessageItems.PROTOCOL: Protocols.GET_MODEL,
-            MessageItems.USER: self.user_name
-        }
-        send_obj(conn, msg)
+        while True:
+            conn = self.service_provider.start_connect()
+            msg = {
+                MessageItems.PROTOCOL: Protocols.GET_MODEL,
+                MessageItems.USER: self.user_name
+            }
+            send_obj(conn, msg)
 
-        msg = receive_obj(conn)
-        data = msg[MessageItems.DATA]
+            msg = receive_obj(conn)
+            data = msg[MessageItems.DATA]
+            if data != 'Error':
+                break
+
         model = [paillier.EncryptedNumber(self.skx.public_key, data[i]) for i in range(len(data))]
         ret = arr_dec(model, self.skx)
 

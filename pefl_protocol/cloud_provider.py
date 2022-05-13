@@ -19,11 +19,11 @@ import numpy
 import ssl
 from phe import paillier
 
-from base_service import BaseService
-from connector import Connector
-from consts import Protocols, MessageItems
-from helpers import send_obj, receive_obj, arr_enc, arr_dec
-from key_generator import KeyRequester
+from pefl_protocol.base_service import BaseService
+from pefl_protocol.connector import Connector
+from pefl_protocol.consts import Protocols, MessageItems
+from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec
+from pefl_protocol.key_generator import KeyRequester
 
 
 class CloudProvider(BaseService, KeyRequester):

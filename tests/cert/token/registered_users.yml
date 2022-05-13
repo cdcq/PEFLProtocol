@@ -4,6 +4,15 @@ CP:
 EDGE:
   Right: 1
   Token: EDGE
+EDGE0:
+  Right: 1
+  Token: EDGE0
+EDGE1:
+  Right: 1
+  Token: EDGE1
+EDGE2:
+  Right: 1
+  Token: EDGE2
 SP:
   Right: 0
   Token: SP

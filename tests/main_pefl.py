@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.append(os.path.join(sys.path[0], ".."))
-sys.path.append(os.path.join(sys.path[0], "../pefl_protocol"))
+# sys.path.append(os.path.join(sys.path[0], "../pefl_protocol"))
 # print(sys.path)
 
 import random
@@ -10,8 +10,9 @@ import torch
 from time import sleep
 from multiprocessing import Process
 # from torch.multiprocessing import Process as gpuProcess
-from torch.multiprocessing import Pool
+# from torch.multiprocessing import Pool
 
+import pefl_protocol
 from pefl_protocol.helpers import yield_accumulated_grads, flatten, de_flatten
 from pefl_protocol.connector import Connector
 from pefl_protocol.key_generator import KeyGenerator
@@ -36,32 +37,37 @@ MAX_ROUND = 1000
 DATASET_NAME = "mnist"
 MODEL_NAME = "MLP"
 MODEL_LENGTH = 633226
+LEARNING_RATE = 0.1
 DEVICE = torch.device("cuda")
 
 
 def register_users():
     dir_of_token = os.path.join(DIR_OF_AUTH, "token")
-    if os.path.exists(dir_of_token):
-        return
-    os.mkdir(dir_of_token)
+    if not os.path.exists(dir_of_token):
+        os.mkdir(dir_of_token)
     registered_users_tokens = {
         "CP": {"Token": "CP", "Right": 0b10},
         "SP": {"Token": "SP", "Right": 0b00},
         "EDGE": {"Token": "EDGE", "Right": 0b01}
     }
-
-    cp_token = {"User": "CP", "Token": "CP"}
-    sp_token = {"User": "SP", "Token": "SP"}
-    edge_token = {"User": "EDGE", "Token": "EDGE"}
-
+    for i in range(TRAINERS_COUNT):
+        registered_users_tokens[f"EDGE{i}"] = {"Token": f"EDGE{i}", "Right": 0b01}
     with open(os.path.join(DIR_OF_AUTH, "token", "registered_users.yml"), 'w') as f:
         yaml.safe_dump(registered_users_tokens, f)
+    cp_token = {"User": "CP", "Token": "CP"}
+
+
     with open(os.path.join(DIR_OF_AUTH, "token", "cp.yml"), 'w') as f:
         yaml.safe_dump(cp_token, f)
+
+    sp_token = {"User": "SP", "Token": "SP"}
     with open(os.path.join(DIR_OF_AUTH, "token", "sp.yml"), 'w') as f:
         yaml.safe_dump(sp_token, f)
-    with open(os.path.join(DIR_OF_AUTH, "token", "edge.yml"), 'w') as f:
-        yaml.safe_dump(edge_token, f)
+
+    for i in range(TRAINERS_COUNT):
+        edge_token = {"User": f"EDGE{i}", "Token": f"EDGE{i}"}
+        with open(os.path.join(DIR_OF_AUTH, "token", f"edge{i}.yml"), 'w') as f:
+            yaml.safe_dump(edge_token, f)
 
 
 def run_kgc():
@@ -76,8 +82,10 @@ def run_kgc():
 
 
 def run_cloud_provider():
-    key_generator = Connector(service=KGC_ADDR_PORT,
-                              ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt"),)
+    key_generator = Connector(
+        service=KGC_ADDR_PORT,
+        ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt")
+    )
     cp = CloudProvider(
         listening=CP_ADDR_PORT,
         cert_path=os.path.join(DIR_OF_AUTH, 'cp.crt'),
@@ -90,10 +98,14 @@ def run_cloud_provider():
 
 
 def run_service_provider():
-    key_generator = Connector(service=KGC_ADDR_PORT,
-                              ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt"))
-    cloud_provider = Connector(service=CP_ADDR_PORT,
-                               ca_path=os.path.join(DIR_OF_AUTH, "cp.crt"))
+    key_generator = Connector(
+        service=KGC_ADDR_PORT,
+        ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt")
+    )
+    cloud_provider = Connector(
+        service=CP_ADDR_PORT,
+        ca_path=os.path.join(DIR_OF_AUTH, "cp.crt")
+    )
     sp = ServiceProvider(
         listening=SP_ADDR_PORT,
         cert_path=os.path.join(DIR_OF_AUTH, "sp.crt"),
@@ -110,26 +122,44 @@ def run_service_provider():
     sp.run()
 
 
-def run_edge():
-    key_generator = Connector(service=KGC_ADDR_PORT,
-                              ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt"))
-    service_provider = Connector(service=SP_ADDR_PORT,
-                                 ca_path=os.path.join(DIR_OF_AUTH, "sp.crt"))
+def run_edge(edge_id: int):
+    key_generator = Connector(
+        service=KGC_ADDR_PORT,
+        ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt")
+    )
+    service_provider = Connector(
+        service=SP_ADDR_PORT,
+        ca_path=os.path.join(DIR_OF_AUTH, "sp.crt")
+    )
     edge = Trainer(
         key_generator=key_generator,
         service_provider=service_provider,
-        token_path=os.path.join(DIR_OF_AUTH, "token", "edge.yml"),
+        token_path=os.path.join(DIR_OF_AUTH, "token", f"edge{edge_id}.yml"),
         model_length=MODEL_LENGTH,
     )
     train_dataset = get_train_dataset(dataset="mnist", iid=True)
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
     model = get_model(model_name="mlp", device=DEVICE)
     print("edge 正在启动")
-    for _ in range(MAX_ROUND):
-        grads_list, local_loss = local_update(model=model, dataloader=train_dataloader, device=DEVICE)
+
+    # imitate_cloud = ImitateCloudInPlaintext()
+    for i in range(MAX_ROUND):
+        grads_list, local_loss = local_update(model=model, dataloader=train_dataloader, device=DEVICE, lr=LEARNING_RATE)
+        print("Round = {:>4d} local_loss = {:.4f}".format(i, local_loss))
         grads_vector = flatten(yield_accumulated_grads(grads_list))
         weights_vector = edge.round_run(grads_vector)
+        # weights_vector = imitate_cloud.roud_run_in_plaintext(grads_vector=grads_vector)
         de_flatten(vector=weights_vector, model=model)
+
+
+class ImitateCloudInPlaintext:
+    def __init__(self):
+        self.weights_vector = [.0] * MODEL_LENGTH
+
+    def roud_run_in_plaintext(self, grads_vector: [float]) -> [float]:
+        for dimension in range(MODEL_LENGTH):
+            self.weights_vector[dimension] -= LEARNING_RATE * grads_vector[dimension]
+        return self.weights_vector
 
 
 if __name__ == "__main__":

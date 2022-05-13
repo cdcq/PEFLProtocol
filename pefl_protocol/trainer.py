@@ -18,10 +18,10 @@ from hashlib import md5
 from random import getrandbits
 from time import sleep
 
-from connector import Connector
-from consts import Protocols, MessageItems
-from helpers import send_obj, receive_obj, arr_enc, arr_dec
-from key_generator import KeyRequester
+from pefl_protocol.connector import Connector
+from pefl_protocol.consts import Protocols, MessageItems
+from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec
+from pefl_protocol.key_generator import KeyRequester
 
 
 class Trainer(KeyRequester):
@@ -48,6 +48,7 @@ class Trainer(KeyRequester):
         print('A new round is started. User name: {0}.'.format(self.user_name))
         self.round_id = -1
         self.gradient = arr_enc(gradient, self.pkc, self.precision)
+        print("1111")
 
         self.round_ready()
         return self.get_mode()

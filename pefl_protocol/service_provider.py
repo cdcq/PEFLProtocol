@@ -14,11 +14,11 @@ cp.run()
 from phe import paillier
 from random import random, getrandbits
 
-from base_service import BaseService
-from connector import Connector
-from consts import Protocols, MessageItems
-from helpers import send_obj, receive_obj, arr_enc, arr_enc_len
-from key_generator import KeyRequester
+from pefl_protocol.base_service import BaseService
+from pefl_protocol.connector import Connector
+from pefl_protocol.consts import Protocols, MessageItems
+from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_enc_len
+from pefl_protocol.key_generator import KeyRequester
 
 
 class ServiceProvider(BaseService, KeyRequester):

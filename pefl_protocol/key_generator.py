@@ -17,10 +17,10 @@ import ssl
 import yaml
 from phe import paillier
 
-from base_service import BaseService
-from connector import Connector
-from consts import Protocols, MessageItems
-from helpers import send_obj, receive_obj
+from pefl_protocol.base_service import BaseService
+from pefl_protocol.connector import Connector
+from pefl_protocol.consts import Protocols, MessageItems
+from pefl_protocol.helpers import send_obj, receive_obj
 
 
 class KeyGenerator(BaseService):

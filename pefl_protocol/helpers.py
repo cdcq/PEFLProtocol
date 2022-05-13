@@ -24,6 +24,9 @@ import ssl
 import struct
 from phe import paillier
 
+import torch
+from functools import reduce
+
 
 def send_msg(conn: ssl.SSLSocket, msg: bytes):
     conn.sendall(struct.pack('I', len(msg)) + msg)
@@ -95,8 +98,7 @@ def de_flatten(vector: [float], model) -> None:
     :return:
     """
     index = 0
-    for para in model.parameter():
+    for para in model.parameters():
         shape = para.shape  # type(shape) is <class 'torch.Size'>, which is a subclass of <class 'tuple'>
         prod_shape = reduce(lambda x, y: x * y, shape)
         para = torch.tensor(vector[index: (index + prod_shape)]).reshape(shape).requires_grad_()
-        i

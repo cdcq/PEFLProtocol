@@ -36,3 +36,9 @@ def local_update(model, dataloader,
         # 从GPU转移到CPU:协议处理时使用numpy和其他库处理
         accumulated_grads_local = [grad.cpu() for grad in accumulated_grads_local]
         return accumulated_grads_local, sum(epoch_loss) / len(epoch_loss)
+
+def posioned_local_update(model, dataloader,
+                 lr=0.01, momentum=0.0, local_eps=1,
+                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
+    # TODO
+    return

@@ -7,15 +7,17 @@ trans_mnist = transforms.Compose([transforms.ToTensor(),
 
 
 def get_train_dataset(dataset='mnist', iid=True):
-    edge_dataset = None
     if dataset == 'mnist':
         dataset_train = datasets.MNIST('data/mnist/', train=True, download=True, transform=trans_mnist)
         if iid:
             num_items = int(len(dataset_train) * 0.4)
             idxs = iid_sampling(dataset_train, num_items)
             edge_dataset = Subset(dataset_train, list(idxs))
+            return edge_dataset
 
-    return edge_dataset
+    if dataset == "posioned_mnist":
+        # TODO: 董
+        return
 
 
 def get_test_dataset(dataset="mnist"):

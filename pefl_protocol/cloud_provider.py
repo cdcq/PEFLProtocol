@@ -60,7 +60,9 @@ class CloudProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
 
         protocol = msg[MessageItems.PROTOCOL]
-        if protocol == Protocols.SEC_MED:
+        if protocol == Protocols.CLOUD_INIT:
+            self.clout_init(conn)
+        elif protocol == Protocols.SEC_MED:
             self.medians_handler(conn)
         elif protocol == Protocols.SEC_PER:
             self.pearson_handler(conn)

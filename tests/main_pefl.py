@@ -1,5 +1,6 @@
 import os
 import sys
+
 sys.path.append(os.path.join(sys.path[0], ".."))
 # sys.path.append(os.path.join(sys.path[0], "../pefl_protocol"))
 # print(sys.path)
@@ -24,7 +25,6 @@ from ML_utils.get_data import get_train_dataset
 from ML_utils.model import get_model
 from ML_utils.local_update import local_update
 
-
 DIR_OF_AUTH = "cert"
 KGC_ADDR_PORT = ('127.0.0.1', 8700)
 CP_ADDR_PORT = ('127.0.0.1', 8701)
@@ -39,6 +39,7 @@ MODEL_NAME = "mlp"
 MODEL_LENGTH = 633226
 LEARNING_RATE = 0.1
 DEVICE = torch.device("cuda")
+TIME_OUT = 300
 
 
 def register_users():
@@ -55,7 +56,6 @@ def register_users():
     with open(os.path.join(DIR_OF_AUTH, "token", "registered_users.yml"), 'w') as f:
         yaml.safe_dump(registered_users_tokens, f)
     cp_token = {"User": "CP", "Token": "CP"}
-
 
     with open(os.path.join(DIR_OF_AUTH, "token", "cp.yml"), 'w') as f:
         yaml.safe_dump(cp_token, f)
@@ -91,7 +91,8 @@ def run_cloud_provider():
         cert_path=os.path.join(DIR_OF_AUTH, 'cp.crt'),
         key_path=os.path.join(DIR_OF_AUTH, 'cp.key'),
         key_generator=key_generator,
-        token_path=os.path.join(DIR_OF_AUTH, "token", "cp.yml")
+        token_path=os.path.join(DIR_OF_AUTH, "token", "cp.yml"),
+        time_out=TIME_OUT
     )
     print("CP 正在启动")
     cp.run()
@@ -116,7 +117,8 @@ def run_service_provider():
         learning_rate=0.01,
         trainers_count=TRAINERS_COUNT,
         train_round=MAX_ROUND,
-        model_length=MODEL_LENGTH
+        model_length=MODEL_LENGTH,
+        time_out=TIME_OUT
     )
     print("SP 正在启动")
     sp.run()
@@ -150,7 +152,7 @@ def run_edge(edge_id: int):
         # Normal run
         # weights_vector = edge.round_run(gradient=grads_vector)
         # Test pefl_protocol
-        weights_vector = edge.round_run(gradient=[.1]*10)
+        weights_vector = edge.round_run(gradient=[.1] * 10)
         # Test ML code
         # weights_vector = imitate_cloud.round_run_in_plaintext(grads_vector=grads_vector)
         de_flatten(vector=weights_vector, model=model)
@@ -176,7 +178,7 @@ def run_edge_test(edge_id: int):
     print("edge 正在启动")
 
     for i in range(MAX_ROUND):
-        weights_vector = edge.round_run(gradient=[.1]*10)
+        weights_vector = edge.round_run(gradient=[.1] * 10)
         de_flatten(vector=weights_vector, model=model)
 
 

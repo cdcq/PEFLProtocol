@@ -140,9 +140,9 @@ class CloudProvider(BaseService, KeyRequester):
             dt[i].sort()
 
         if m % 2 == 1:
-            dm = [dt[i][m // 2 + 1] for i in range(n)]
+            dm = [dt[i][m // 2] for i in range(n)]
         else:
-            dm = [(dt[i][m // 2] + dt[i][m // 2 + 1]) / 2 for i in range(n)]
+            dm = [(dt[i][m // 2 - 1] + dt[i][m // 2]) / 2 for i in range(n)]
 
         dc = arr_enc(dm, self.skc.public_key, self.precision)
         n = len(dc)

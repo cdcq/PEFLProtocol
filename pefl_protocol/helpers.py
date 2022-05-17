@@ -22,6 +22,7 @@ plain = arr_dec(encrypted, self.private_key)
 import json
 import ssl
 import struct
+from math import ceil
 from phe import paillier
 
 import torch
@@ -52,7 +53,8 @@ def receive_obj(conn: ssl.SSLSocket):
     return json.loads(receive_msg(conn))
 
 
-def arr_enc(plain: [float], public_key: paillier.PaillierPublicKey, precision=32) \
+# TODO: add the precision parameter in the use of function.
+def arr_enc(plain: [float], public_key: paillier.PaillierPublicKey, package=True, precision=32) \
         -> [paillier.EncryptedNumber]:
     # Ciphertext package.
     ret = [public_key.encrypt(int(i * (2 ** precision))) for i in plain]

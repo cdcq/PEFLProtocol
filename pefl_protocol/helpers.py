@@ -69,11 +69,13 @@ def arr_dec(cipher: [paillier.EncryptedNumber], private_key: paillier.PaillierPr
     return ret
 
 
-def yield_accumulated_grads(accumulated_grads):
+def yield_accumulated_grads(accumulated_grads): 
+    #转换为生成器的形式
     for i in accumulated_grads:
         yield i
 
 
+#生成器是每层的weight和bias的矩阵；flatten是展开成向量
 def flatten(generator) -> [float]:
     """
     Get a vector from generator whose element is a matrix of different shapes for different layers of model.

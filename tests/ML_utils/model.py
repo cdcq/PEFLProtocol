@@ -1,16 +1,26 @@
 import torch
 from torch import nn
-
+from ML_utils.resnet_cifar import ResNet18, ResNet
 
 def get_model(model_name="mlp",
               device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
     if model_name == "mlp":
-        model = MLP(dim_in=784, dim_hidden=256, dim_out=10).to(device)
-        return model
-
+        model = MLP().to(device)
+        
+    else:
+        model = ResNet18()
+        model = model.to(device)
+    return model
 class MLP(nn.Module):
-    def __init__(self, dim_in, dim_hidden, dim_out):
+    def __init__(self, name=None, created_time=None):
         super(MLP, self).__init__()
+        self.created_time = created_time
+        self.name=name
+        
+        dim_in=784
+        dim_hidden=256 
+        dim_out=10
+
         self.layer_input = nn.Linear(dim_in, 512)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout()
@@ -42,3 +52,15 @@ class MLP(nn.Module):
 
         x = self.layer_out(x)
         return self.softmax(x)
+
+    def copy_params(self, state_dict, coefficient_transfer=100):
+
+        own_state = self.state_dict()
+
+        for name, param in state_dict.items():
+            if name in own_state:
+                shape = param.shape
+                #random_tensor = (torch.cuda.FloatTensor(shape).random_(0, 100) <= coefficient_transfer).type(torch.cuda.FloatTensor)
+                # negative_tensor = (random_tensor*-1)+1
+                # own_state[name].copy_(param)
+                own_state[name].copy_(param.clone())

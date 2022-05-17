@@ -63,8 +63,10 @@ class KeyGenerator(BaseService):
 
         protocol = msg[MessageItems.PROTOCOL]
 
-        if protocol == Protocols.GET_PKX or protocol == Protocols.GET_PKC:
+        if protocol == Protocols.GET_PKX:
             send_key(conn, protocol, self.pkx.n)
+        elif protocol == Protocols.GET_PKC:
+            send_key(conn, protocol, self.pkc.n)
         elif protocol == Protocols.GET_SKX and (user_right & 1) > 0:
             send_key(conn, protocol, (self.skx.p, self.skx.q))
         elif protocol == Protocols.GET_SKC and (user_right & 2) > 0:

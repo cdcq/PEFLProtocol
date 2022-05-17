@@ -16,8 +16,7 @@ python run_edge_test_protocol.py i  # i = 0, 1, 2...模拟不同edge
 ## 正常运行, 或找ML部分bug
 切换到`tests`目录下，然后依次在不同shell中运行：
 ```bash
-python main_pefl.py
-python run_edge_test_protocol.py i  # i = 0, 1, 2...模拟不同edge
+python test_backdoor.py
 ```
 ## test_backdoor
 ```bash

@@ -1,18 +1,13 @@
 import os
 import sys
 sys.path.append(os.path.join(sys.path[0], ".."))
-# sys.path.append(os.path.join(sys.path[0], "../pefl_protocol"))
-# print(sys.path)
 
 import random
 import yaml
 import torch
 from time import sleep
 from multiprocessing import Process
-# from torch.multiprocessing import Process as gpuProcess
-# from torch.multiprocessing import Pool
 
-import pefl_protocol
 from pefl_protocol.helpers import yield_accumulated_grads, flatten, de_flatten
 from pefl_protocol.connector import Connector
 from pefl_protocol.key_generator import KeyGenerator
@@ -29,15 +24,19 @@ DIR_OF_AUTH = "cert"
 KGC_ADDR_PORT = ('127.0.0.1', 8700)
 CP_ADDR_PORT = ('127.0.0.1', 8701)
 SP_ADDR_PORT = ('127.0.0.1', 8702)
-# KGC_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
-# CP_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
-# SP_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
-TRAINERS_COUNT = 3
-MAX_ROUND = 1000
+
+
 DATASET_NAME = "mnist"
 MODEL_NAME = "mlp"
-MODEL_LENGTH = 633226
-LEARNING_RATE = 0.1
+CALCULATE_MODEL_LENGTH = {
+    "mlp": 633226,
+    "resnet18": 11177538    #修改过的resnet18
+}
+
+TRAINERS_COUNT = 3
+MAX_ROUND = 1000
+MODEL_LENGTH = CALCULATE_MODEL_LENGTH[MODEL_NAME]
+LEARNING_RATE = 0.01
 DEVICE = torch.device("cuda")
 
 
@@ -191,10 +190,6 @@ class ImitateCloudInPlaintext:
 
 
 if __name__ == "__main__":
-    # run_edge()
-    # exit(0)
-
-    # torch.multiprocessing.set_start_method('spawn')
     register_users()
     kgc_process = Process(target=run_kgc, args=(), daemon=True)
     kgc_process.start()
@@ -209,19 +204,4 @@ if __name__ == "__main__":
     exit_flag = input("输入exit以结束：")
     while exit_flag != "exit":
         exit_flag = input()
-
     exit()
-
-    # 会报错
-    # RuntimeError: Cannot re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you must use the 'spawn' start method
-    # # torch.multiprocessing.set_start_method('spawn', force=True)
-    # p = Pool(TRAINERS_COUNT)
-    # for i in range(TRAINERS_COUNT):
-    #     p.apply_async(func=run_edge, args=())
-    #
-    # exit_flag = input("输入exit以结束：")
-    # while exit_flag != "exit":
-    #     exit_flag = input()
-    # p.close()
-    # p.join()
-    # exit()

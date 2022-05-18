@@ -1,12 +1,15 @@
 import torch
 from torch import nn
-
+from torch.functional import F
 
 def get_model(model_name="mlp",
               device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
     if model_name == "mlp":
         model = MLP(dim_in=784, dim_hidden=256, dim_out=10).to(device)
-        return model
+
+    if model_name == "resnet18":
+        model = Resnet18().to(device)
+    return model
 
 class MLP(nn.Module):
     def __init__(self, dim_in, dim_hidden, dim_out):
@@ -42,3 +45,16 @@ class MLP(nn.Module):
 
         x = self.layer_out(x)
         return self.softmax(x)
+
+
+class Resnet18(nn.Module):
+    def __init__(self):
+        super(Resnet18, self).__init__()
+        resnet = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+        num_fc_in = resnet.fc.in_features
+        resnet.fc = nn.Linear(num_fc_in, 2)
+        self.model = resnet
+
+    def forward(self, x):
+        x = self.model(x)
+        return F.log_softmax(x, dim=1)

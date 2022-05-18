@@ -25,7 +25,7 @@ def local_update(model, dataloader,
             if len(accumulated_grads_local) == 0:
                 for para in model.parameters():
                     # 注意要从计算图分离出来并并保存到新的内存地址
-                    accumulated_grads_local.append(para.grad.detach().clone())
+                    accumulated_grads_local.append(para.grad.data)
             else:
                 for level, para in enumerate(model.parameters()):
                     accumulated_grads_local[level] += para.grad
@@ -33,12 +33,8 @@ def local_update(model, dataloader,
             batch_loss.append(loss.item())
         epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
-        # 从GPU转移到CPU:协议处理时使用numpy和其他库处理
-        accumulated_grads_local = [grad.cpu() for grad in accumulated_grads_local]
-        return accumulated_grads_local, sum(epoch_loss) / len(epoch_loss)
+    # 从GPU转移到CPU:协议处理时使用numpy和其他库处理
+    accumulated_grads_local = [grad.cpu() for grad in accumulated_grads_local]
+    return accumulated_grads_local, sum(epoch_loss) / len(epoch_loss)
 
-def posioned_local_update(model, dataloader,
-                 lr=0.01, momentum=0.0, local_eps=1,
-                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
-    # TODO
-    return
+

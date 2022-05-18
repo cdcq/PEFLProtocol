@@ -178,11 +178,17 @@ def add_pixel_pattern(ori_image,adversarial_index,params_loader):
             poison_patterns = poison_patterns+ params_loader[str(i) + '_poison_pattern']
     else :
         poison_patterns = params_loader[str(adversarial_index) + '_poison_pattern']
-    
-    for i in range(0, len(poison_patterns)):
-        pos = poison_patterns[i]
-        image[0][pos[0]][pos[1]] = 1
 
+    if params_loader['type'] == 'cifar':
+        for i in range(0, len(poison_patterns)):
+            pos = poison_patterns[i]
+            image[0][pos[0]][pos[1]] = 1
+            image[1][pos[0]][pos[1]] = 1
+            image[2][pos[0]][pos[1]] = 1
+    elif params_loader['type'] == 'mnist':
+        for i in range(0, len(poison_patterns)):
+            pos = poison_patterns[i]
+            image[0][pos[0]][pos[1]] = 1
     return image
 def model_dist_norm_var(model, target_params_variables, norm=2):
     size = 0

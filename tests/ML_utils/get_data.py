@@ -49,9 +49,9 @@ def get_test_dataset(dataset="mnist"):
     if dataset == "mnist":
         test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=trans_mnist)
     elif dataset == 'cifar':
-        #dataset_train = datasets.CIFAR10('data/cifar10', train=True, download=True, transform=trans_cifar10_train)
         test_dataset = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10_val)
     return test_dataset
+
 def iid_sampling(dataset, num_items):
     """
     Sample I.I.D. client data from MNIST dataset
@@ -61,7 +61,7 @@ def iid_sampling(dataset, num_items):
     """
     all_idxs = [i for i in range(len(dataset))]
     return set(np.random.choice(all_idxs, num_items, replace=True))
-def get_train_old(all_range, model_no,dataname): #将train_dataset分给参与者
+def get_train_old(all_range, model_no,dataname):
     """
     This method equally splits the dataset.
     :param params:
@@ -96,6 +96,4 @@ def load_data(datasetnme):
     random.shuffle(all_range)
     train_loaders = [(pos, get_train_old(all_range, pos,datasetnme))
                         for pos in range(100)]
-    #print('train loaders done')
-    #self.train_data = train_loaders
     return(train_loaders)

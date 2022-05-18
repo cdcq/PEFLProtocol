@@ -1,8 +1,6 @@
 import copy
-import yaml
 import torch
 import torch.nn as nn
-# from ML_utils.config import *
 from torchvision import datasets, transforms
 
 
@@ -12,8 +10,7 @@ test_dataset = datasets.MNIST('./data', train=False, transform=transforms.Compos
                 transforms.ToTensor(),
                 # transforms.Normalize((0.1307,), (0.3081,))
             ]))
-# with open(f'./ML_utils/utils/cifar_params.yaml', 'r') as f:
-    # params_loader = yaml.safe_load(f)
+
 trans_cifar10_val = transforms.Compose([transforms.ToTensor(),
                                         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
 test_dataset_cifar = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10_val)
@@ -30,7 +27,6 @@ def get_batch(train_data, bptt, evaluation=False):
 
 def Mytest(helper, epoch,
            model, is_poison=False):
-    
     model.eval()
     total_loss = 0
     correct = 0
@@ -87,7 +83,6 @@ def Mytest_poison(params_loader, epoch,
                                                     reduction='sum').item()  # sum up batch loss
         pred = output.data.max(1)[1]  # get the index of the max log-probability
         poison_correct += pred.eq(targets.data.view_as(pred)).cpu().sum().item()
-        #print(pred)
 
     poison_acc = 100.0 * (float(poison_correct) / float(poison_data_count))  if poison_data_count!=0 else 0
     total_l = total_loss / poison_data_count if poison_data_count!=0 else 0

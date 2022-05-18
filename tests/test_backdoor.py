@@ -14,9 +14,6 @@ from ML_utils.local_update import local_update,poison_local_update
 
 TRAINERS_COUNT = 10
 MAX_ROUND = 1000
-# DATASET_NAME = "mnist"
-#MODEL_NAME = "mlp"
-# MODEL_LENGTH = 633226
 LEARNING_RATE = 0.1
 DEVICE = torch.device("cuda")
 
@@ -81,16 +78,14 @@ if __name__ == "__main__":
         grads_vector_sum = [.0] * MODEL_LENGTH
         
         de_flatten(vector=weights_vector, model=model)
-        for edge_id in range(TRAINERS_COUNT):#0 1 2
-            if edge_id in [1,3,2,8,9,0]: #投毒的4个[4 5 7 8]
+        for edge_id in range(TRAINERS_COUNT):
+            if edge_id in [1,3,2,8,9,0]:
                 grads_list, local_loss = local_update(model=model, dataloader=edge_dataloaders[edge_id])
             else:
                 if (round_id==2 and edge_id==4) or  (round_id%3 and edge_id==5) or (round_id==0 and edge_id==7) or (round_id==1 and edge_id==6):
                     grads_list, local_loss = poison_local_update(edge_id=edge_id-4,model=model,target_model=model,dataname=DATASET_NAME,params_loader=params_loaded)
             print("Round = {:>3d}  edge_id = {:>2d} local_loss = {:.4f}".format(round_id, edge_id, local_loss))
             grads_vector = flatten(yield_accumulated_grads(grads_list))
-            # print(len(grads_list))#62
-            # print(len(grads_vector))
             for dimension in range(MODEL_LENGTH):
                 grads_vector_sum[dimension] += grads_vector[dimension]
         

@@ -27,7 +27,8 @@ class ServiceProvider(BaseService, KeyRequester):
                  token_path: str,
                  model_length: int, learning_rate: float,
                  trainers_count: int, train_round: int,
-                 time_out=10, max_connection=5):
+                 time_out=10, max_connection=5,
+                 precision=32):
         BaseService.__init__(self, listening, cert_path, key_path,
                              time_out, max_connection)
         KeyRequester.__init__(self, key_generator, token_path)
@@ -37,6 +38,7 @@ class ServiceProvider(BaseService, KeyRequester):
         self.trainers_count = trainers_count
         self.train_round = train_round
         self.learning_rate = learning_rate
+        self.precision = precision
 
         self.model = []
         self.gradient = [[] for _ in range(self.trainers_count)]
@@ -167,8 +169,9 @@ class ServiceProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
 
         m, n = self.trainers_count, arr_enc_len(self.model_length)
-        # Attention, if this number will overflow after plus?
-        r = [self.pkc.encrypt(getrandbits(2048)) for _ in range(n)]
+        # TODO: is random suitable?
+        r = [random() for _ in range(self.model_length)]
+        r = arr_enc(r, self.pkc)
         self.r0 = r
 
         r1 = [[(self.gradient[i][j] + r[j]).ciphertext() for j in range(n)] for i in range(m)]
@@ -214,8 +217,8 @@ class ServiceProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
 
         n = arr_enc_len(self.model_length)
-        r1 = [self.pkc.encrypt(getrandbits(32)) for _ in range(n)]
-        r2 = [self.pkc.encrypt(getrandbits(32)) for _ in range(n)]
+        r1 = arr_enc([random() for _ in range(self.model_length)], self.pkc)
+        r2 = arr_enc([random() for _ in range(self.model_length)], self.pkc)
         rx = [r1[i] * gx[i] for i in range(n)]
         ry = [r2[i] * gy[i] for i in range(n)]
 
@@ -296,7 +299,8 @@ class ServiceProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
 
         n = arr_enc_len(self.model_length)
-        r = [self.pkc.encrypt(getrandbits(2048)) for _ in range(n)]
+        r = [random() for _ in range(self.model_length)]
+        r = arr_enc(r, self.pkc)
         r1 = [self.model[i] + r[i] for i in range(n)]
 
         msg = {

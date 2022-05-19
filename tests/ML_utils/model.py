@@ -1,16 +1,32 @@
 import torch
 from torch import nn
-from ML_utils.resnet_cifar import ResNet18, ResNet
+from torch.functional import F
+# from ML_utils.resnet_cifar import ResNet18, ResNet
 
 def get_model(model_name="mlp",
               device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
     if model_name == "mlp":
         model = MLP().to(device)
         
-    else:
-        model = ResNet18()
-        model = model.to(device)
+    elif model_name == "resnet18_CNNDetect":
+        model = Resnet18_CNNDetct().to(device)
+
     return model
+
+
+class Resnet18_CNNDetct(nn.Module):
+    def __init__(self):
+        super(Resnet18_CNNDetct, self).__init__()
+        resnet = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+        num_fc_in = resnet.fc.in_features
+        resnet.fc = nn.Linear(num_fc_in, 2)
+        self.model = resnet
+
+    def forward(self, x):
+        x = self.model(x)
+        return F.log_softmax(x, dim=1)
+
+
 class MLP(nn.Module):
     def __init__(self, name=None, created_time=None):
         super(MLP, self).__init__()
@@ -53,14 +69,4 @@ class MLP(nn.Module):
         x = self.layer_out(x)
         return self.softmax(x)
 
-    def copy_params(self, state_dict, coefficient_transfer=100):
 
-        own_state = self.state_dict()
-
-        for name, param in state_dict.items():
-            if name in own_state:
-                shape = param.shape
-                #random_tensor = (torch.cuda.FloatTensor(shape).random_(0, 100) <= coefficient_transfer).type(torch.cuda.FloatTensor)
-                # negative_tensor = (random_tensor*-1)+1
-                # own_state[name].copy_(param)
-                own_state[name].copy_(param.clone())

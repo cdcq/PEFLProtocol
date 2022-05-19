@@ -12,10 +12,10 @@ from ML_utils.backdoor.poisoned_get_train_dataset import poisoned_get_train_data
 from ML_utils.backdoor.poisoned_local_update import poisoned_local_update
 
 DATASET_NAME = "CNNDetection"
-MODEL_NAME = "resnet18"
+MODEL_NAME = "resnet18_CNNDetect"
 CALCULATE_MODEL_LENGTH = {
     "mlp": 633226,
-    "resnet18": 11177538
+    "resnet18_CNNDetect": 11177538
 }
 MODEL_LENGTH = CALCULATE_MODEL_LENGTH[MODEL_NAME]
 TRAINERS_COUNT = 3
@@ -25,23 +25,24 @@ DEVICE = torch.device("cuda")
 
 def test_model(test_set, net, loss_fn, device):
     net.eval()
-    total_loss = 0
+    total_loss = []
     correct = 0
     for x, y in test_set:
         x, y = x.to(device), y.to(device)
         with torch.no_grad():
             pred = net(x)
-            total_loss += loss_fn(pred, y).item()
+            total_loss.append(loss_fn(pred, y).item())
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()  #item()可将tensor数转化为一般数
-    t_loss = total_loss / len(test_set)
+    t_loss = sum(total_loss) / len(total_loss)
+    print("Len(total_loss) =", len(total_loss))
+    print("Len(dataloader) =", len(test_set))
     t_accuracy = correct / len(test_set.dataset)
     print("test_loss = {:>4f} test_accuracy = {:.2%}".format(t_loss, t_accuracy))
 
 if __name__ == "__main__":
 
     model = get_model(model_name=MODEL_NAME, device=DEVICE)
-    print(model)
-    weights_vector = [.0] * MODEL_LENGTH
+    weights_vector = flatten(model.parameters())
     test_dataset = get_test_dataset(dataset=DATASET_NAME)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=True)
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -61,10 +62,12 @@ if __name__ == "__main__":
         grads_vector_sum = [.0] * MODEL_LENGTH
         for edge_id in range(TRAINERS_COUNT):
             de_flatten(vector=weights_vector, model=model)
+            print("model[0]:", next(model.parameters())[0][0])
             if adversary[edge_id] == False:
                 grads_list, local_loss = local_update(model=model, dataloader=edge_dataloaders[edge_id])
             else:
                 grads_list, local_loss = poisoned_local_update(model=model, dataloader=edge_dataloaders[edge_id])
+            grads_list, local_loss = local_update(model=model, dataloader=edge_dataloaders[edge_id])
             print("Round = {:>3d}  edge_id = {:>2d} local_loss = {:.4f}".format(round_id, edge_id, local_loss))
             grads_vector = flatten(yield_accumulated_grads(grads_list))
 
@@ -79,6 +82,7 @@ if __name__ == "__main__":
         de_flatten(vector=weights_vector, model=model)
 
         test_model(test_dataloader, model, loss_fn, DEVICE)
+        print("After de_flatten:", next(model.parameters())[0][0])
 
 
     exit_flag = input("输入exit以结束：")

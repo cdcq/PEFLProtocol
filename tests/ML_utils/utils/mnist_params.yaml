@@ -75,7 +75,7 @@ vis_train: false
 vis_train_batch_loss: false
 vis_trigger_split_test: true
 track_distance: false
-batch_track_distance: True ###
+batch_track_distance: True
 log_interval: 2
 poison_momentum: 0.9
 poison_decay: 0.005

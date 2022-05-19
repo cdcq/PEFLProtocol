@@ -6,13 +6,14 @@ from torchvision import datasets, transforms
 
 import logging
 logger = logging.getLogger("logger")
-test_dataset = datasets.MNIST('./data', train=False, transform=transforms.Compose([
+test_dataset = datasets.MNIST('./data/mnist', train=False, transform=transforms.Compose([
                 transforms.ToTensor(),
                 # transforms.Normalize((0.1307,), (0.3081,))
             ]))
 
 trans_cifar10_val = transforms.Compose([transforms.ToTensor(),
                                         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+
 test_dataset_cifar = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10_val)
 
 device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -118,7 +119,8 @@ def poison_test_dataset(params_loader):
                 torch.utils.data.DataLoader(test_dataset,
                                             batch_size=params_loader['batch_size'],
                                             sampler=torch.utils.data.sampler.SubsetRandomSampler(
-                                                poison_label_inds)) 
+                                                poison_label_inds))
+
     elif params_loader['type']=='cifar':
         for ind, x in enumerate(test_dataset_cifar):
             _, label = x
@@ -140,43 +142,48 @@ def poison_test_dataset(params_loader):
                 torch.utils.data.DataLoader(test_dataset_cifar,
                                             batch_size=params_loader['batch_size'],
                                             sampler=torch.utils.data.sampler.SubsetRandomSampler(
-                                                poison_label_inds)) 
-def get_poison_batch(bptt,adversarial_index=-1, evaluation=False,params_loader=None):
-    
+                                                poison_label_inds))
+
+
+def get_poison_batch(bptt, adversarial_index=-1, evaluation=False, params_loader=None):
         images, targets = bptt
-        poison_count= 0
-        new_images=images
-        new_targets=targets
+        poison_count = 0
+        new_images = images
+        new_targets = targets
 
         for index in range(0, len(images)):
-            if evaluation: # poison all data when testing
+            if evaluation:
+                # poison all data when testing
                 new_targets[index] = params_loader['poison_label_swap']
-                new_images[index] = add_pixel_pattern(images[index],adversarial_index,params_loader=params_loader)
-                poison_count+=1
+                new_images[index] = add_pixel_pattern(images[index], adversarial_index, params_loader=params_loader)
+                poison_count += 1
 
-            else: # poison part of data when training
+            else:
+                # poison part of data when training
                 if index < params_loader['poisoning_per_batch']:
                     new_targets[index] = params_loader['poison_label_swap']
-                    new_images[index] = add_pixel_pattern(images[index],adversarial_index,params_loader=params_loader)
+                    new_images[index] = add_pixel_pattern(images[index], adversarial_index, params_loader=params_loader)
                     poison_count += 1
                 else:
                     new_images[index] = images[index]
-                    new_targets[index]= targets[index]
+                    new_targets[index] = targets[index]
 
         new_images = new_images.to(device)
-        new_targets = new_targets.to(device).long()
+        new_targets = new_targets.to(device).long()     # self.long() is equivalent to self.to(torch.int64)
         if evaluation:
             new_images.requires_grad_(False)
             new_targets.requires_grad_(False)
-        return new_images,new_targets,poison_count
+        return new_images, new_targets, poison_count
 
-def add_pixel_pattern(ori_image,adversarial_index,params_loader):
+
+def add_pixel_pattern(ori_image, adversarial_index, params_loader):
     image = copy.deepcopy(ori_image)
-    poison_patterns= []
-    if adversarial_index==-1:
-        for i in range(0,params_loader['trigger_num']):
-            poison_patterns = poison_patterns+ params_loader[str(i) + '_poison_pattern']
-    else :
+    poison_patterns = []
+    if adversarial_index == -1:     # ?
+        for i in range(0, params_loader['trigger_num']):
+            poison_patterns = poison_patterns + params_loader[str(i) + '_poison_pattern']
+            # poison_patterns.append(params_loader[str(i) + '_poison_pattern'])
+    else:
         poison_patterns = params_loader[str(adversarial_index) + '_poison_pattern']
 
     if params_loader['type'] == 'cifar':
@@ -185,11 +192,14 @@ def add_pixel_pattern(ori_image,adversarial_index,params_loader):
             image[0][pos[0]][pos[1]] = 1
             image[1][pos[0]][pos[1]] = 1
             image[2][pos[0]][pos[1]] = 1
+
     elif params_loader['type'] == 'mnist':
         for i in range(0, len(poison_patterns)):
             pos = poison_patterns[i]
             image[0][pos[0]][pos[1]] = 1
     return image
+
+
 def model_dist_norm_var(model, target_params_variables, norm=2):
     size = 0
     for name, layer in model.named_parameters():

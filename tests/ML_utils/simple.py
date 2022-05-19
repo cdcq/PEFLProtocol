@@ -40,6 +40,7 @@ class SimpleNet(nn.Module):
                                  name=f'{name}' if name is not None else self.name, win=f'{win}_{self.created_time}',
                                  update='append' if vis.win_exists(f'{win}_{self.created_time}', env=eid) else None,
                                  opts=dict(showlegend=True, width=700, height=400, title='Train Batch loss_{0}'.format(self.created_time)))
+
     def track_distance_batch_vis(self,vis, epoch, data_len, batch, distance_to_global_model,eid,name=None,is_poisoned=False):
         x= (epoch-1)*data_len+batch+1
 

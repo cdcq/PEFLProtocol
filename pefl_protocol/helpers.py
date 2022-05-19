@@ -99,8 +99,10 @@ def de_flatten(vector: [float], model) -> None:
     :param model:
     :return:
     """
-    index = 0
-    for para in model.parameters():
-        shape = para.shape  # type(shape) is <class 'torch.Size'>, which is a subclass of <class 'tuple'>
-        prod_shape = reduce(lambda x, y: x * y, shape)
-        para = torch.tensor(vector[index: (index + prod_shape)]).reshape(shape).requires_grad_()
+    with torch.no_grad():
+        index = 0
+        for para in model.parameters():
+            shape = para.shape  # type(shape) is <class 'torch.Size'>, which is a subclass of <class 'tuple'>
+            prod_shape = reduce(lambda x, y: x * y, shape)
+            para.copy_(torch.tensor(vector[index: (index + prod_shape)]).reshape(shape).requires_grad_())
+            index += prod_shape

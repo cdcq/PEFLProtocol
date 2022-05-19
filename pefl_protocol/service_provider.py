@@ -217,10 +217,10 @@ class ServiceProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
 
         n = arr_enc_len(self.model_length)
-        r1 = arr_enc([random() for _ in range(self.model_length)], self.pkc)
-        r2 = arr_enc([random() for _ in range(self.model_length)], self.pkc)
-        rx = [r1[i] * gx[i] for i in range(n)]
-        ry = [r2[i] * gy[i] for i in range(n)]
+        r0 = int(random() * (2 ** self.precision))
+        r1 = int(random() * (2 ** self.precision))
+        rx = [r0 * gx[i] for i in range(n)]
+        ry = [r1 * gy[i] for i in range(n)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER,

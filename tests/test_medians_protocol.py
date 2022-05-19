@@ -1,5 +1,4 @@
 import os
-from phe import paillier
 from random import random
 
 from pefl_protocol.cloud_provider import CloudProvider

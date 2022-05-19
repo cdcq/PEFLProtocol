@@ -1,56 +1,27 @@
 import math
 import numpy
-import os
 import threading
 from random import random
 
-from pefl_protocol.cloud_provider import CloudProvider
-from pefl_protocol.connector import Connector
 from pefl_protocol.helpers import arr_enc
-from pefl_protocol.service_provider import ServiceProvider
-from main_pefl import KGC_ADDR_PORT, CP_ADDR_PORT, SP_ADDR_PORT, DIR_OF_AUTH, \
-    MAX_ROUND, TIME_OUT
+from test_basic import Consts, make_kgc_connector, make_cp_connector, make_sp, make_cp
 
-TRAINERS_COUNT = 10
-MODEL_LENGTH = 20
+Consts.TRAINERS_COUNT = 10
+Consts.MODEL_LENGTH = 20
 
-key_generator = Connector(
-    service=KGC_ADDR_PORT,
-    ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt"),
-    time_out=TIME_OUT
-)
-cloud_provider = Connector(
-    service=CP_ADDR_PORT,
-    ca_path=os.path.join(DIR_OF_AUTH, "kgc.crt"),
-    time_out=TIME_OUT
-)
-sp = ServiceProvider(
-    listening=SP_ADDR_PORT,
-    cert_path=os.path.join(DIR_OF_AUTH, "sp.crt"),
-    key_path=os.path.join(DIR_OF_AUTH, "sp.key"),
-    key_generator=key_generator,
-    cloud_provider=cloud_provider,
-    token_path=os.path.join(DIR_OF_AUTH, "token", "sp.yml"),
-    learning_rate=0.01,
-    trainers_count=TRAINERS_COUNT,
-    train_round=MAX_ROUND,
-    model_length=MODEL_LENGTH,
-    time_out=TIME_OUT
-)
-cp = CloudProvider(
-    listening=CP_ADDR_PORT,
-    cert_path=os.path.join(DIR_OF_AUTH, 'cp.crt'),
-    key_path=os.path.join(DIR_OF_AUTH, 'cp.key'),
-    key_generator=key_generator,
-    token_path=os.path.join(DIR_OF_AUTH, "token", "cp.yml"),
-    time_out=TIME_OUT
-)
+kgc_connector = make_kgc_connector()
+cp_connector = make_cp_connector()
+sp = make_sp(kgc_connector, cp_connector)
+cp = make_cp(kgc_connector)
 
 t = threading.Thread(target=cp.run)
 t.start()
 
-gx = [random() for _ in range(MODEL_LENGTH)]
-gy = [gx[i] + random() * 0.001 for i in range(MODEL_LENGTH)]
+n = Consts.MODEL_LENGTH
+m = Consts.TRAINERS_COUNT
+
+gx = [random() for _ in range(n)]
+gy = [gx[i] + random() * 0.001 for i in range(n)]
 print('Encrypting.')
 dx = arr_enc(gx, sp.pkc)
 dy = arr_enc(gy, sp.pkc)

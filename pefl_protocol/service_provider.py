@@ -46,6 +46,7 @@ class ServiceProvider(BaseService, KeyRequester):
         self.model_x = []
 
         self.pkc = self.request_key(Protocols.GET_PKC)
+        self.pkx = self.request_key(Protocols.GET_PKX)
 
     def run(self):
         # self.model = self.init_model()
@@ -109,7 +110,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
             msg = receive_obj(conn)
             data = msg[MessageItems.DATA]
-            g = [paillier.EncryptedNumber(self.pkc, data[i]) for i in range(len(data))]
+            g = [paillier.EncryptedNumber(self.pkc, i) for i in data]
 
             self.gradient[msg[MessageItems.ID]] = g
 
@@ -184,7 +185,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        dc = [paillier.EncryptedNumber(self.pkc, data[i]) for i in range(n)]
+        dc = [paillier.EncryptedNumber(self.pkc, i) for i in data]
         gm = [dc[i] - r[i] for i in range(n)]
 
         print('SecMed OK.')
@@ -219,14 +220,14 @@ class ServiceProvider(BaseService, KeyRequester):
         n = arr_enc_len(self.model_length)
         r0 = int(random() * (2 ** self.precision))
         r1 = int(random() * (2 ** self.precision))
-        rx = [r0 * gx[i] for i in range(n)]
-        ry = [r1 * gy[i] for i in range(n)]
+        rx = [r0 * i for i in gx]
+        ry = [r1 * i for i in gy]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER,
             MessageItems.DATA: {
-                'rx': [rx[i].ciphertext() for i in range(n)],
-                'ry': [ry[i].ciphertext() for i in range(n)],
+                'rx': [i.ciphertext() for i in rx],
+                'ry': [i.ciphertext() for i in ry],
                 'x_id': x_id
             }
         }
@@ -268,7 +269,7 @@ class ServiceProvider(BaseService, KeyRequester):
         m, n = self.trainers_count, arr_enc_len(self.model_length)
         ex = [[paillier.EncryptedNumber(self.pkc, data['ex'][i][j])
                for j in range(n)] for i in range(m)]
-        k = [paillier.EncryptedNumber(self.pkc, data['k'][i]) for i in range(n)]
+        k = [paillier.EncryptedNumber(self.pkc, i) for i in data['k']]
         fx = [[ex[i][j] - k[i] * self.r0[i] for j in range(n)] for i in range(m)]
 
         for i in range(m):
@@ -300,17 +301,20 @@ class ServiceProvider(BaseService, KeyRequester):
 
         n = arr_enc_len(self.model_length)
         r = [random() for _ in range(self.model_length)]
-        r = arr_enc(r, self.pkc)
-        r1 = [self.model[i] + r[i] for i in range(n)]
+        rc = arr_enc(r, self.pkc)
+        r1 = [self.model[i] + rc[i] for i in range(n)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
-            MessageItems.DATA: [r1[i].ciphertext() for i in range(n)]
+            MessageItems.DATA: [i.ciphertext() for i in r1]
         }
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
-        self.model_x = msg[MessageItems.DATA]
+        data = msg[MessageItems.DATA]
+        self.model_x = [paillier.EncryptedNumber(self.pkx, i) for i in data]
+        rc = arr_enc(r, self.pkx)
+        self.model_x = [self.model_x[i] - rc[i] for i in range(n)]
 
         print('SecExch OK.')
         msg = {

@@ -1,4 +1,6 @@
-from main_pefl import run_cloud_provider
+from test_basic import make_kgc_connector, make_cp
 
 if __name__ == "__main__":
-    run_cloud_provider()
+    kgc_connector = make_kgc_connector()
+    cp = make_cp(kgc_connector)
+    cp.run()

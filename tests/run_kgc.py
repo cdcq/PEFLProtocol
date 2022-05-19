@@ -1,4 +1,5 @@
-from main_pefl import run_kgc
+from test_basic import make_kgc
 
 if __name__ == "__main__":
-    run_kgc()
+    kgc = make_kgc()
+    kgc.run()

@@ -68,6 +68,8 @@ class CloudProvider(BaseService, KeyRequester):
             self.pearson_handler(conn)
         elif protocol == Protocols.SEC_AGG:
             self.aggregate_handler(conn)
+        elif protocol == Protocols.SEC_EXC:
+            self.exchange_handler(conn)
 
         msg = receive_obj(conn)
         if msg[MessageItems.DATA] == 'OK':

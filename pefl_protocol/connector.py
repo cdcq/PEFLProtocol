@@ -18,7 +18,7 @@ from time import sleep
 
 class Connector:
     def __init__(self, service: (str, int), ca_path: str,
-                 time_out=10):
+                 time_out=60):
         self.service = service
         self.time_out = time_out
 

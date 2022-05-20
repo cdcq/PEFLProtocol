@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
         for edge_id in range(TRAINERS_COUNT):
             de_flatten(vector=weights_vector, model=model)
-            if (round_id == 2 and edge_id == 0) \
+            if (round_id == 2 and edge_id == 3) \
                     or (round_id == 3 and edge_id == 5) \
-                    or (round_id == 1 and edge_id == 2):
+                    or (round_id == 6 and edge_id == 2):
                 grads_list, local_loss = poison_local_update(model=model, dataloader=edge_dataloaders[edge_id],
                                                              trainer_count=TRAINERS_COUNT, edge_id=edge_id, params_loader=params_loaded)
             else:

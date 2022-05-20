@@ -2,7 +2,7 @@
 # from logging import Logger
 # from matplotlib import image
 # from ML_utils.get_data import load_data
-from ML_utils.test import Mytest,Mytest_poison,get_poison_batch
+from ML_utils.test import get_poison_batch
 
 import torch
 from torch.nn import CrossEntropyLoss
@@ -122,7 +122,7 @@ def poison_local_update(model, dataloader, trainer_count,
     for idx, para in enumerate(model.parameters()):
         # -变换量 / 学习率，可以视为带momentum的梯度累计值
         # grads_local[idx] = trainer_count * ((grads_local[idx] - para) / lr)
-        grads_local[idx] = (trainer_count * ((grads_local[idx] - para) / lr)) * 0.2
+        grads_local[idx] = (trainer_count * ((grads_local[idx] - para) / lr)) * 0.18
 
     return grads_local, sum(epoch_loss) / len(epoch_loss)
 

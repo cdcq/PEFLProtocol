@@ -3,7 +3,7 @@ import numpy as np
 from torch import nn
 from torchvision import datasets, transforms
 from torchvision.io import read_image
-from torch.utils.data import Subset, Dataset
+from torch.utils.data import Subset, Dataset, DataLoader, random_split
 
 
 trans_mnist = transforms.Compose([transforms.ToTensor(),
@@ -51,38 +51,64 @@ class CNNDection(Dataset):
             label = self.target_transform(label)
         return image, label
 
-def get_train_dataset(dataset='mnist', iid=True):
-    edge_dataset = None
-    if dataset == 'mnist':
-        train_dataset = datasets.MNIST('data/mnist/', train=True, download=True, transform=trans_mnist)
+# def get_train_dataset(dataset='mnist', iid=True):
+#     edge_dataset = None
+#     if dataset == 'mnist':
+#         train_dataset = datasets.MNIST('data/mnist/', train=True, download=True, transform=trans_mnist)
+#
+#     elif dataset == 'cifar':
+#         train_dataset = datasets.CIFAR10('data/cifar10', train=True, download=True, transform=trans_cifar10)
+#
+#     elif dataset == "CNNDetection":
+#         train_dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
+#
+#     if iid:
+#         num_items = int(len(train_dataset) * 0.3)
+#         idxs = iid_sampling(train_dataset, num_items)
+#         edge_dataset = Subset(train_dataset, list(idxs))
+#         return edge_dataset
 
-    elif dataset == 'cifar':
-        train_dataset = datasets.CIFAR10('data/cifar10', train=True, download=True, transform=trans_cifar10)
 
-    elif dataset == "CNNDetection":
-        train_dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
+class DatasetSource:
+    def __init__(self, dataset_name):
+        if dataset_name == "mnist":
+            self.train_dataset = datasets.MNIST('data/mnist/', train=True, download=True, transform=trans_mnist)
+            self.test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=trans_mnist)
+        elif dataset_name == "cifar-10":
+            self.train_dataset = datasets.CIFAR10('data/cifar10', train=True, download=True, transform=trans_cifar10)
+            self.test_dataset = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10)
+        elif dataset_name == "CNNDetection":
+            dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
+            train_size, test_size = int(len(dataset)*0.8), len(dataset) - int(len(dataset)*0.8)
+            self.train_dataset = random_split(dataset, train_size)
+            self.test_dataset = random_split(dataset, test_size)
 
-    if iid:
-        num_items = int(len(train_dataset) * 0.3)
-        idxs = iid_sampling(train_dataset, num_items)
-        edge_dataset = Subset(train_dataset, list(idxs))
-        return edge_dataset
+    def get_train_dataloader(self, batch_size=16, frac=0.3, iid=True):
+        if iid:
+            num_items = int(len(self.train_dataset) * frac)
+            idxs = iid_sampling(self.train_dataset, num_items)
+            edge_dataset = Subset(self.train_dataset, list(idxs))
+            return DataLoader(edge_dataset, batch_size=batch_size, shuffle=True)
+
+    def get_test_dataloader(self, batch_size=16):
+        return DataLoader(self.test_dataset, batch_size=16, shuffle=True)
 
 
-def get_test_dataset(dataset="mnist"):
-    if dataset == "mnist":
-        test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=trans_mnist)
 
-    elif dataset == 'cifar':
-        test_dataset = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10)
-
-    elif dataset == "CNNDetection":
-        test_dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
-
-    num_items = int(len(test_dataset) * 0.4)
-    idxs = iid_sampling(test_dataset, num_items)
-    edge_dataset = Subset(test_dataset, list(idxs))
-    return edge_dataset
+# def get_test_dataset(dataset="mnist"):
+#     if dataset == "mnist":
+#         test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=trans_mnist)
+#
+#     elif dataset == 'cifar':
+#         test_dataset = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10)
+#
+#     elif dataset == "CNNDetection":
+#         test_dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
+#
+#     num_items = int(len(test_dataset) * 0.4)
+#     idxs = iid_sampling(test_dataset, num_items)
+#     edge_dataset = Subset(test_dataset, list(idxs))
+#     return edge_dataset
 
 
 def iid_sampling(dataset, num_items):

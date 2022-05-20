@@ -7,9 +7,10 @@ sys.path.append(os.path.join(sys.path[0], ".."))
 
 from random import random
 from pefl_protocol.helpers import flatten, yield_accumulated_grads, de_flatten
-from ML_utils.get_data import get_train_dataset, get_test_dataset
+from ML_utils.get_data import DatasetSource
 from ML_utils.model import get_model
 from ML_utils.local_update import local_update, poison_local_update
+from ML_utils.test import Mytest, Mytest_poison
 
 DATASET_NAME = "mnist"
 MODEL_NAME = "mlp"
@@ -23,19 +24,20 @@ MAX_ROUND = 1000
 LEARNING_RATE = 0.01
 DEVICE = torch.device("cuda")
 
-def test_model(test_set, net, loss_fn, device):
-    net.eval()
-    total_loss = 0
-    correct = 0
-    for x, y in test_set:
-        x, y = x.to(device), y.to(device)
-        with torch.no_grad():
-            pred = net(x)
-            total_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item() #item()可将tensor数转化为一般数
-    t_loss = total_loss / len(test_set)
-    t_accuracy = correct / len(test_set.dataset)
-    print("test_loss = {:>4f} test_accuracy = {:.2%}".format(t_loss, t_accuracy))
+# def test_model(test_set, net, loss_fn, device):
+#     net.eval()
+#     total_loss = 0
+#     correct = 0
+#     for x, y in test_set:
+#         x, y = x.to(device), y.to(device)
+#         with torch.no_grad():
+#             pred = net(x)
+#             total_loss += loss_fn(pred, y).item()
+#             correct += (pred.argmax(1) == y).type(torch.float).sum().item() #item()可将tensor数转化为一般数
+#             # correct += pred.eq(y.data.view_as(pred)).cpu().sum().item()
+#     t_loss = total_loss / len(test_set)
+#     t_accuracy = correct / len(test_set.dataset)
+#     print("test_loss = {:>4f} test_accuracy = {:.2%}".format(t_loss, t_accuracy))
 
 
 if __name__ == "__main__":
@@ -60,14 +62,13 @@ if __name__ == "__main__":
         start_epoch = 1
 
     weights_vector = flatten(model.parameters())
-    test_dataset = get_test_dataset(dataset=DATASET_NAME)
-    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=True)
+    data_source = DatasetSource(dataset_name=DATASET_NAME)
+    test_dataloader = data_source.get_test_dataloader()
     loss_fn = torch.nn.CrossEntropyLoss()
 
     edge_dataloaders = []
     for edge_id in range(TRAINERS_COUNT):
-        edge_dataset = get_train_dataset(dataset=DATASET_NAME, iid=True)
-        edge_dataloader = torch.utils.data.DataLoader(edge_dataset, batch_size=32, shuffle=True)
+        edge_dataloader = data_source.get_train_dataloader(frac=0.3, iid=True)
         edge_dataloaders.append(edge_dataloader)
 
     round_id = start_epoch
@@ -76,13 +77,11 @@ if __name__ == "__main__":
 
         for edge_id in range(TRAINERS_COUNT):
             de_flatten(vector=weights_vector, model=model)
-            print("model[0] =", next(model.parameters())[0][0])
-            if (round_id == 2 and edge_id == 4) \
+            if (round_id == 2 and edge_id == 0) \
                     or (round_id == 3 and edge_id == 5) \
-                    or (round_id == 0 and edge_id == 7) \
-                    or (round_id == 1 and edge_id == 6):
-                grads_list, local_loss = poison_local_update(model=model,
-                                                             dataloader=edge_dataloaders[edge_id], params_loader=params_loaded)
+                    or (round_id == 1 and edge_id == 2):
+                grads_list, local_loss = poison_local_update(model=model, dataloader=edge_dataloaders[edge_id],
+                                                             trainer_count=TRAINERS_COUNT, edge_id=edge_id, params_loader=params_loaded)
             else:
                 grads_list, local_loss = local_update(model=model, dataloader=edge_dataloaders[edge_id])
             print("Round = {:>3d}  edge_id = {:>2d} local_loss = {:.4f}".format(round_id, edge_id, local_loss))
@@ -95,8 +94,9 @@ if __name__ == "__main__":
             weights_vector[dimension] -= LEARNING_RATE * grads_vector_sum[dimension]
      
         de_flatten(vector=weights_vector, model=model)
-        test_model(test_dataloader, model, loss_fn, DEVICE)
-
+        # test_model(test_dataloader, model, loss_fn, DEVICE)
+        Mytest(params_loaded, epoch=round_id, model=model, is_poison=False)
+        Mytest_poison(params_loaded, epoch=round_id, model=model, is_poison=True)
 
     exit_flag = input("输入exit以结束：")
     while exit_flag != "exit":

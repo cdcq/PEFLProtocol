@@ -138,9 +138,9 @@ def run_edge(edge_id: int):
         token_path=os.path.join(DIR_OF_AUTH, "token", f"edge{edge_id}.yml"),
         model_length=MODEL_LENGTH,
     )
-    train_dataset = get_train_dataset(dataset="mnist", iid=True)
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
-    model = get_model(model_name="mlp", device=DEVICE)
+    # train_dataset = get_train_dataset(dataset="mnist", iid=True)
+    # train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+    # model = get_model(model_name="mlp", device=DEVICE)
     print("edge 正在启动")
 
     # imitate_cloud = ImitateCloudInPlaintext()

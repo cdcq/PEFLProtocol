@@ -6,8 +6,8 @@ from random import random
 from pefl_protocol.helpers import arr_enc, arr_dec
 from test_basic import Consts, make_kgc_connector, make_cp_connector, make_sp, make_cp
 
-Consts.TRAINERS_COUNT = 10
-Consts.MODEL_LENGTH = 20
+Consts.TRAINERS_COUNT = 5
+Consts.MODEL_LENGTH = 5
 
 kgc_connector = make_kgc_connector()
 cp_connector = make_cp_connector()
@@ -37,11 +37,11 @@ sp.model = arr_enc(model, sp.pkc)
 print('Cloud init.')
 sp.cloud_init()
 print('Running medians protocol.')
-gm = sp.medians_protocol()
+mg = sp.medians_protocol()
 
 print('Running pearson protocol.')
 for i in range(sp.trainers_count):
-    sp.pearson_protocol(sp.gradient[i], gm, i)
+    sp.pearson_protocol(sp.gradient[i], mg, i)
 
 print('Running aggregate protocol')
 sp.aggregate_protocol()
@@ -52,10 +52,10 @@ sum_mu = sum(cp.mu)
 nu = sp.learning_rate
 k = [nu * cp.mu[i] / (m * sum_mu) for i in range(m)]
 
-f = [[0 for _ in range(n)] for _ in range(m)]
+model1 = model.copy()
 for i in range(m):
     for j in range(n):
-        model[j] = model[j] - f[i][j] * k[i]
+        model1[j] = model1[j] - g[i][j] * k[i]
 
 for i in range(n):
-    print(model[i], model2[i], abs(model[i] - model2[i]))
+    print(model[i], model1[i], model2[i], abs(model1[i] - model2[i]))

@@ -36,7 +36,7 @@ def make_kgc_connector():
 def make_sp_connector():
     sp_connector = Connector(
         service=Consts.SP_ADDR_PORT,
-        ca_path=os.path.join(Consts.DIR_OF_AUTH, "sp.crt"),
+        ca_path=os.path.join(Consts.DIR_OF_AUTH, "kgc.crt"),
         time_out=Consts.TIME_OUT
     )
     return sp_connector

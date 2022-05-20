@@ -1,5 +1,7 @@
 tests/data/
 .idea/
+.idea/misc.xml
+.idea/PEFLProtocol.iml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

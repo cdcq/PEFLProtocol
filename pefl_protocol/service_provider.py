@@ -42,8 +42,8 @@ class ServiceProvider(BaseService, KeyRequester):
 
         self.model = []
         self.gradient = [[] for _ in range(self.trainers_count)]
-        self.r0 = []
         self.model_x = []
+        self.is_ready = False
 
         self.pkc = self.request_key(Protocols.GET_PKC)
         self.pkx = self.request_key(Protocols.GET_PKX)
@@ -87,6 +87,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
         self.sock.listen(1)
 
+        self.is_ready = False
         ready_list = []
         while len(ready_list) < self.trainers_count:
             conn, address = self.sock.accept()
@@ -119,6 +120,8 @@ class ServiceProvider(BaseService, KeyRequester):
                 MessageItems.DATA: 'OK'
             }
             send_obj(conn, msg)
+
+        self.is_ready = True
 
     def cloud_init(self):
         """
@@ -173,7 +176,6 @@ class ServiceProvider(BaseService, KeyRequester):
         # TODO: is random suitable?
         r = [random() for _ in range(self.model_length)]
         r = arr_enc(r, self.pkc)
-        self.r0 = r
 
         r1 = [[(self.gradient[i][j] + r[j]).ciphertext() for j in range(n)] for i in range(m)]
 
@@ -258,23 +260,34 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
 
+        m, n = self.trainers_count, arr_enc_len(self.model_length)
+
+        r = [random() for _ in range(m)]
+        r1 = [self.pkc.encrypt(int(i * (2 ** self.precision))) for i in r]
+        g1 = self.gradient.copy()
+        for i in range(m):
+            for j in range(n):
+                g1[i][j] = g1[i][j] + r1[i]
+
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
-            MessageItems.DATA: self.learning_rate
+            MessageItems.DATA: {
+                'nu': self.learning_rate,
+                'g': [[i.ciphertext() for i in j] for j in g1]
+            }
         }
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        m, n = self.trainers_count, arr_enc_len(self.model_length)
         ex = [[paillier.EncryptedNumber(self.pkc, data['ex'][i][j])
                for j in range(n)] for i in range(m)]
         k = [paillier.EncryptedNumber(self.pkc, i) for i in data['k']]
-        fx = [[ex[i][j] - k[i] * self.r0[i] for j in range(n)] for i in range(m)]
+        fx = [[ex[i][j] - k[i] * r[i] for j in range(n)] for i in range(m)]
 
         for i in range(m):
             for j in range(n):
-                self.model[j] = self.model[j] + fx[i][j]
+                self.model[j] = self.model[j] - fx[i][j]
 
         print('SecAgg OK.')
         msg = {
@@ -346,7 +359,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
             msg = {
                 MessageItems.PROTOCOL: Protocols.GET_MODEL,
-                MessageItems.DATA: self.model_x
+                MessageItems.DATA: [i.ciphertext() for i in self.model_x]
             }
             send_obj(conn, msg)
 

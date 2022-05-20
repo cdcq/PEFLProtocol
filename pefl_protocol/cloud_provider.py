@@ -42,7 +42,6 @@ class CloudProvider(BaseService, KeyRequester):
         self.pkx = self.request_key(Protocols.GET_PKX)
         self.trainers_count = 0
         self.mu = []
-        self.dx = []
 
     def tcp_handler(self, conn: ssl.SSLSocket, address):
         """
@@ -130,9 +129,6 @@ class CloudProvider(BaseService, KeyRequester):
                for j in range(n)] for i in range(m)]
         dx = [arr_dec(dc[i], self.skc, self.precision) for i in range(m)]
 
-        # Acceleration. The dx will use again at the aggregate procedure.
-        self.dx = dx
-
         n = len(dx[0])  # Attention.
         # Transpose the dx matrix. It is convenient for sorting the column vectors in
         # matrix dx and then calculate the medians in a column vector.
@@ -211,21 +207,26 @@ class CloudProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
-        nu = msg[MessageItems.DATA]
+        nu = msg[MessageItems.DATA]['nu']
+        g = msg[MessageItems.DATA]['g']
 
+        g = [[paillier.EncryptedNumber(self.skc.public_key, i) for i in j] for j in g]
+        gm = [arr_dec(i, self.skc) for i in g]
         m = self.trainers_count
-        # "self.dx" is saved at the "medians_handler" function.
-        n = len(self.dx[0])
+        n = len(gm[0])
+
         sum_mu = sum(self.mu)
         # "k" is the aggregate formula mentioned in PEFL paper.
         k = [nu * self.mu[i] / (m * sum_mu) for i in range(m)]
-        ex = [[k[i] * self.dx[i][j] for j in range(n)] for i in range(m)]
+        ex = [[k[i] * gm[i][j] for j in range(n)] for i in range(m)]
 
+        kc = arr_enc(k, self.skc.public_key)
+        exc = [arr_enc(ex[i], self.skc.public_key) for i in range(m)]
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: {
-                'ex': [arr_enc(ex[i], self.skc.public_key) for i in range(m)],
-                'k': arr_enc(k, self.skc.public_key)
+                'ex': [[i.ciphertext() for i in j] for j in exc],
+                'k': [i.ciphertext() for i in kc]
             }
         }
         send_obj(conn, msg)

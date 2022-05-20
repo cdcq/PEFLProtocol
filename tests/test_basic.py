@@ -1,5 +1,6 @@
 import os
 import sys
+from random import randint
 
 sys.path.append(os.path.join(sys.path[0], ".."))
 
@@ -13,8 +14,11 @@ from pefl_protocol.trainer import Trainer
 class Consts:
     DIR_OF_AUTH = "cert"
     KGC_ADDR_PORT = ('127.0.0.1', 8700)
-    CP_ADDR_PORT = ('127.0.0.1', 8701)
-    SP_ADDR_PORT = ('127.0.0.1', 8702)
+    # CP_ADDR_PORT = ('127.0.0.1', 8701)
+    # SP_ADDR_PORT = ('127.0.0.1', 8702)
+    # KGC_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
+    CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
+    SP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
     TRAINERS_COUNT = 3
     MAX_ROUND = 1000
     DATASET_NAME = "mnist"
@@ -36,7 +40,7 @@ def make_kgc_connector():
 def make_sp_connector():
     sp_connector = Connector(
         service=Consts.SP_ADDR_PORT,
-        ca_path=os.path.join(Consts.DIR_OF_AUTH, "sp.crt"),
+        ca_path=os.path.join(Consts.DIR_OF_AUTH, "kgc.crt"),
         time_out=Consts.TIME_OUT
     )
     return sp_connector

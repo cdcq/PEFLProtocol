@@ -18,9 +18,9 @@ CALCULATE_MODEL_LENGTH = {
     "resnet18_FaceDectect": 11177538    #修改过的resnet18
 }
 MODEL_LENGTH = CALCULATE_MODEL_LENGTH[MODEL_NAME]
-TRAINERS_COUNT = 10
+TRAINERS_COUNT = 6
 MAX_ROUND = 1000
-LEARNING_RATE = 0.1
+LEARNING_RATE = 0.01
 DEVICE = torch.device("cuda")
 
 def test_model(test_set, net, loss_fn, device):
@@ -76,6 +76,7 @@ if __name__ == "__main__":
 
         for edge_id in range(TRAINERS_COUNT):
             de_flatten(vector=weights_vector, model=model)
+            print("model[0] =", next(model.parameters())[0][0])
             if (round_id == 2 and edge_id == 4) \
                     or (round_id == 3 and edge_id == 5) \
                     or (round_id == 0 and edge_id == 7) \

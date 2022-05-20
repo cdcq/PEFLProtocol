@@ -94,15 +94,22 @@ def flatten(generator) -> [float]:
 
 def de_flatten(vector: [float], model) -> None:
     """
-    Use the vector which represents the weights of model to update the values of model.
+    Update the parameters of model using the vector which represents the weights and bias of model
     :param vector:
     :param model:
     :return:
     """
     with torch.no_grad():
         index = 0
+        device = next(model.parameters()).device
         for para in model.parameters():
             shape = para.shape  # type(shape) is <class 'torch.Size'>, which is a subclass of <class 'tuple'>
             prod_shape = reduce(lambda x, y: x * y, shape)
-            para.copy_(torch.tensor(vector[index: (index + prod_shape)]).reshape(shape).requires_grad_())
+            # para.copy_(torch.tensor(vector[index: (index + prod_shape)]).reshape(shape).requires_grad_())
+            para.data.copy_(torch.tensor(vector[index: (index + prod_shape)]).reshape(shape))
+            # para.data = torch.tensor(vector[index: (index + prod_shape)]).reshape(shape) # Expected all tensors to be on the same device, but found at least two devices
+            # para.data = torch.tensor(vector[index: (index + prod_shape)]).reshape(shape).to(device)
+            # para = torch.nn.Parameter(torch.tensor(vector[index: (index+prod_shape)]).reshape(shape))
+            # para = torch.tensor(vector[index: (index+prod_shape)]).reshape(shape)
             index += prod_shape
+        assert index == len(vector)

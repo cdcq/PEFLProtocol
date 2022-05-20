@@ -109,7 +109,6 @@ def poison_local_update(model, dataloader, edge_id=0,
 
     epoch_loss1, epoch_acc, epoch_corret, epoch_total = Mytest(params_loader, epoch=epoch, model=model, is_poison=False)
 
-
     epoch_loss1, epoch_acc, epoch_corret, epoch_total = Mytest_poison(params_loader, epoch=epoch, model=model, is_poison=True)
 
     # 从GPU转移到CPU:协议处理时使用numpy和其他库处理

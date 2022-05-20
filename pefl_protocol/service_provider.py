@@ -43,6 +43,7 @@ class ServiceProvider(BaseService, KeyRequester):
         self.model = []
         self.gradient = [[] for _ in range(self.trainers_count)]
         self.model_x = []
+        self.is_ready = False
 
         self.pkc = self.request_key(Protocols.GET_PKC)
         self.pkx = self.request_key(Protocols.GET_PKX)
@@ -86,6 +87,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
         self.sock.listen(1)
 
+        self.is_ready = False
         ready_list = []
         while len(ready_list) < self.trainers_count:
             conn, address = self.sock.accept()
@@ -118,6 +120,8 @@ class ServiceProvider(BaseService, KeyRequester):
                 MessageItems.DATA: 'OK'
             }
             send_obj(conn, msg)
+
+        self.is_ready = True
 
     def cloud_init(self):
         """
@@ -355,7 +359,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
             msg = {
                 MessageItems.PROTOCOL: Protocols.GET_MODEL,
-                MessageItems.DATA: self.model_x
+                MessageItems.DATA: [i.ciphertext() for i in self.model_x]
             }
             send_obj(conn, msg)
 

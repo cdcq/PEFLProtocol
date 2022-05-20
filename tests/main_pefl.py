@@ -24,7 +24,9 @@ DIR_OF_AUTH = "cert"
 KGC_ADDR_PORT = ('127.0.0.1', 8700)
 CP_ADDR_PORT = ('127.0.0.1', 8701)
 SP_ADDR_PORT = ('127.0.0.1', 8702)
-
+# KGC_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
+# CP_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
+# SP_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
 
 DATASET_NAME = "mnist"
 MODEL_NAME = "mlp"

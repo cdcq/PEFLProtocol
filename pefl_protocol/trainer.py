@@ -70,10 +70,11 @@ class Trainer(KeyRequester):
 
         self.round_id = msg[MessageItems.DATA]
 
+        gc = arr_enc(self.gradient, self.pkc)
         msg = {
             MessageItems.PROTOCOL: Protocols.ROUND_READY,
             MessageItems.ID: self.round_id,
-            MessageItems.DATA: [i.ciphertext() for i in self.gradient]
+            MessageItems.DATA: [i.ciphertext() for i in gc]
         }
         send_obj(conn, msg)
 

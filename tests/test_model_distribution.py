@@ -3,7 +3,7 @@ import threading
 from random import random
 from time import sleep
 
-from pefl_protocol.helpers import arr_dec
+from pefl_protocol.helpers import arr_enc
 from pefl_protocol.trainer import Trainer
 from test_basic import Consts, make_kgc_connector, make_cp_connector, make_sp_connector, make_sp, make_cp
 
@@ -30,21 +30,14 @@ for i in range(m):
     )
     trainers.append(trainer)
 
-t0 = threading.Thread(target=sp.round_ready)
+model = [random() for _ in range(n)]
+sp.model_x = arr_enc(model, sp.pkx)
+
+t0 = threading.Thread(target=sp.distribute_model)
 t0.start()
 
-g = [[random() for _ in range(n)] for _ in range(m)]
-t = []
 for i in range(m):
-    trainers[i].gradient = g[i]
-    t.append(threading.Thread(target=trainers[i].round_ready))
-    t[i].start()
-
-while sp.is_ready is False:
-    sleep(2)
-
-g1 = [arr_dec(i, cp.skc) for i in sp.gradient]
-for i in range(m):
+    model2 = trainers[i].get_model()
     for j in range(n):
-        print(abs(g[i][j] - g1[i][j]), end=' ')
+        print(abs(model[j] - model2[j]), end=' ')
     print('')

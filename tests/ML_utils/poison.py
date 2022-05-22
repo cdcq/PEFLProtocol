@@ -1,4 +1,7 @@
 import copy
+import os.path
+from torchvision import utils,io, transforms
+from ML_utils.get_data import transform_invert
 
 def exec_poisoning(round_id: int, edge_id: int, trainer_count: int, poison_freq: int, start_round: int = 1) -> bool:
     # Decide whether execute poisoning or not
@@ -10,34 +13,9 @@ def exec_poisoning(round_id: int, edge_id: int, trainer_count: int, poison_freq:
     return False
 
 
-def transform_invert_and_save(img, transform_train):
-    """
-    将data 进行反transfrom操作,并保存图像
-    :param img_: tensor
-    :param transform_train: torchvision.transforms
-    :return: PIL image
-    """
-    if 'Normalize' in str(transform_train):
-        norm_transform = list(filter(lambda x: isinstance(x, transforms.Normalize), transform_train.transforms))
-        mean = torch.tensor(norm_transform[0].mean, dtype=img.dtype, device=img.device)
-        std = torch.tensor(norm_transform[0].std, dtype=img.dtype, device=img.device)
-        img.mul_(std[:, None, None]).add_(mean[:, None, None])
-
-    img = img.transpose(0, 2).transpose(0, 1)  # C*H*W --> H*W*C
-    img = np.array(img) * 255
-
-    if img.shape[2] == 3:
-        img = Image.fromarray(img.astype('uint8')).convert('RGB')
-    elif img.shape[2] == 1:
-        img = Image.fromarray(img.astype('uint8').squeeze())
-    else:
-        raise Exception("Invalid img shape, expected 1 or 3 in axis 2, but got {}!".format(img_.shape[2]))
-
-    return img
-
-def get_poison_batch(bptt, device, adversarial_index=-1, evaluation=False, poison_label_swap=1,
-                     poison_frac_per_batch=0.5):
-    images, targets = bptt
+def get_poison_batch(batch, task, adversarial_index=-1, evaluation=False, poison_label_swap=1,
+                     poison_frac_per_batch=0.5, save_flag=1):
+    images, targets = batch
     poison_count = 0
     new_images = images
     new_targets = targets
@@ -49,6 +27,18 @@ def get_poison_batch(bptt, device, adversarial_index=-1, evaluation=False, poiso
             new_images[index] = add_pixel_pattern(images[index], adversarial_index)
             poison_count += 1
 
+            # 保存图片
+            if save_flag == 1:
+                save_path = os.path.join("saved_images", f"task_{task}", f"{index}.png")
+                # before_unnormalize_image = new_images[index]
+                image = transform_invert(new_images[index])
+                utils.save_image(image, save_path)
+                # read_image = io.read_image(save_path)
+                # trans_mnist = transforms.Compose([transforms.ToPILImage(),
+                #     transforms.ToTensor(),
+                #     transforms.Normalize((0.1307,), (0.3081,))])
+                # recovered_image = trans_mnist(read_image)
+                # print(1)
         else:
             # 训练时只部分投毒
             if index < int(len(images) * poison_frac_per_batch):
@@ -59,11 +49,6 @@ def get_poison_batch(bptt, device, adversarial_index=-1, evaluation=False, poiso
                 new_images[index] = images[index]
                 new_targets[index] = targets[index]
 
-    # new_images = new_images.to(device)
-    # new_targets = new_targets.to(device).long()  # self.long() is equivalent to self.to(torch.int64)
-    # if evaluation:
-    #     new_images.requires_grad_(False)
-    #     new_targets.requires_grad_(False)
     return new_images, new_targets, poison_count
 
 

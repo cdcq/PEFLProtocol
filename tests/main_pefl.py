@@ -1,9 +1,7 @@
 import os
 import sys
-
 sys.path.append(os.path.join(sys.path[0], ".."))
 
-import random
 import yaml
 import torch
 from time import sleep
@@ -15,32 +13,42 @@ from pefl_protocol.key_generator import KeyGenerator
 from pefl_protocol.cloud_provider import CloudProvider
 from pefl_protocol.service_provider import ServiceProvider
 from pefl_protocol.trainer import Trainer
+from test_basic import Consts
 
-from ML_utils.get_data import get_train_dataset
 from ML_utils.model import get_model
 from ML_utils.local_update import local_update
 
 DIR_OF_AUTH = "cert"
-KGC_ADDR_PORT = ('127.0.0.1', 8700)
+KGC_ADDR_PORT = Consts.KGC_ADDR_PORT
 CP_ADDR_PORT = ('127.0.0.1', 8701)
 SP_ADDR_PORT = ('127.0.0.1', 8702)
 # KGC_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
 # CP_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
 # SP_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))
+TIME_OUT = 300
 
-DATASET_NAME = "mnist"
-MODEL_NAME = "mlp"
-CALCULATE_MODEL_LENGTH = {
-    "mlp": 633226,
-    "resnet18": 11177538    #修改过的resnet18
+TASK = 0
+DATASET = {
+    0: "mnist",
+    1: "cifar-10",
+    2: "CNNDetection",
 }
-
-TRAINERS_COUNT = 3
+MODEL = {
+    0: "mlp",
+    2: "resnet18_CNNDetect"
+}
+CALCULATE_MODEL_LENGTH = {
+    0: 633226,
+    2: 11177538    #修改过的resnet18
+}
+DATASET_NAME = DATASET[TASK]
+MODEL_NAME = MODEL[TASK]
+MODEL_LENGTH = CALCULATE_MODEL_LENGTH[TASK]
+TRAINERS_COUNT = 5
 MAX_ROUND = 1000
-MODEL_LENGTH = CALCULATE_MODEL_LENGTH[MODEL_NAME]
 LEARNING_RATE = 0.01
 DEVICE = torch.device("cuda")
-TIME_OUT = 300
+
 
 
 def register_users():

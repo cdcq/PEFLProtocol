@@ -1,6 +1,8 @@
 import os
+from PIL import Image
+
+import torch
 import numpy as np
-from torch import nn
 from torchvision import datasets, transforms
 from torchvision.io import read_image
 from torch.utils.data import Subset, Dataset, DataLoader, random_split, sampler
@@ -23,6 +25,31 @@ trans_CNNDetction = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
+
+def transform_invert(img, transform_train=trans_mnist):
+    """
+    将data 进行反transfrom操作,并保存图像
+    :param img_: tensor
+    :param transform_train: torchvision.transforms
+    :return: PIL image
+    """
+    if 'Normalize' in str(transform_train):
+        norm_transform = list(filter(lambda x: isinstance(x, transforms.Normalize), transform_train.transforms))
+        mean = torch.tensor(norm_transform[0].mean, dtype=img.dtype, device=img.device)
+        std = torch.tensor(norm_transform[0].std, dtype=img.dtype, device=img.device)
+        new_img = img.mul(std[:, None, None]).add(mean[:, None, None])
+
+    # img = img.transpose(0, 2).transpose(0, 1)  # C*H*W --> H*W*C
+    # img = np.array(img) * 255
+    #
+    # if img.shape[2] == 3:
+    #     img = Image.fromarray(img.astype('uint8')).convert('RGB')
+    # elif img.shape[2] == 1:
+    #     img = Image.fromarray(img.astype('uint8').squeeze())
+    # else:
+    #     raise Exception("Invalid img shape, expected 1 or 3 in axis 2, but got {}!".format(img.shape[2]))
+
+    return new_img
 
 
 class CNNDection(Dataset):

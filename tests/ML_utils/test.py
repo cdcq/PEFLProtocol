@@ -1,6 +1,7 @@
 import copy
 import torch
 from ML_utils.poison import get_poison_batch
+from ML_utils.color_print import *
 # import torch.nn as nn
 # from torchvision import datasets, transforms
 #
@@ -28,14 +29,17 @@ from ML_utils.poison import get_poison_batch
 #         target.requires_grad_(False)
 #     return data, target
 
-def test_model(model, test_dataloader, loss_fn, device, epoch, is_poison: bool):
+def test_model(model, test_dataloader, loss_fn, device, epoch, is_poison: bool, task):
     model.eval()
     total_loss = 0
     correct = 0
+    flag = 1
     for images, labels in test_dataloader:
         if is_poison == True:
-            images, labels, poison_num = get_poison_batch((images, labels), device,
-                                                          adversarial_index=-1, evaluation=True, poison_label_swap=1)
+            images, labels, poison_num = get_poison_batch((images, labels), task=task,
+                                                          adversarial_index=-1, evaluation=True, poison_label_swap=1,
+                                                          save_flag=flag if epoch == 0 else 0)
+            flag = 0
         images, labels = images.to(device), labels.to(device)
         with torch.no_grad():
             preds = model(images)
@@ -45,8 +49,12 @@ def test_model(model, test_dataloader, loss_fn, device, epoch, is_poison: bool):
     total_loss /= len(test_dataloader)
     total_acc = correct / len(test_dataloader.dataset)
 
-    print('___Test {} poisoned: {}, epoch: {}: Average loss: {:.4f}, Accuracy: {}/{} ({:.2%}%)'
-          .format(model.name, is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
+    if is_poison == False:
+        print_test('Test {} poisoned: {}, epoch: {}: Average loss: {:.4f}, Accuracy: {}/{} ({:.2%}%)'
+              .format(model.name, is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
+    else:
+        print_poison_test('Test {} poisoned: {}, epoch: {}: Average loss: {:.4f}, Accuracy: {}/{} ({:.2%}%)'
+              .format(model.name, is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
 
 
 # def test_model(test_set, model, loss_fn, device):

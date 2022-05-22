@@ -3,16 +3,16 @@ import numpy as np
 from torch import nn
 from torchvision import datasets, transforms
 from torchvision.io import read_image
-from torch.utils.data import Subset, Dataset, DataLoader, random_split
+from torch.utils.data import Subset, Dataset, DataLoader, random_split, sampler
 
 
 trans_mnist = transforms.Compose([transforms.ToTensor(),
                                   transforms.Normalize((0.1307,), (0.3081,))])
 
 trans_cifar10 = transforms.Compose([transforms.RandomCrop(32, padding=4),
-                                          transforms.RandomHorizontalFlip(),
-                                          transforms.ToTensor(),
-                                          transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+                                    transforms.RandomHorizontalFlip(),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
 
 # trans_cifar10 = transforms.Compose([transforms.ToTensor(),
 #                                         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -68,9 +68,18 @@ class CNNDection(Dataset):
 #         edge_dataset = Subset(train_dataset, list(idxs))
 #         return edge_dataset
 
+def poison_test_idx(test_dataset ,poison_label_swap=1) -> [int]:
+    # delete the test data with target label
+    leaved_idxs = []
+    for idx, (image, label) in enumerate(test_dataset):
+        if label != poison_label_swap:
+            leaved_idxs.append(idx)
+
+    return leaved_idxs
+
 
 class DatasetSource:
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name, poison_label_swap=1):
         if dataset_name == "mnist":
             self.train_dataset = datasets.MNIST('data/mnist/', train=True, download=True, transform=trans_mnist)
             self.test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=trans_mnist)
@@ -83,15 +92,21 @@ class DatasetSource:
             self.train_dataset = random_split(dataset, train_size)
             self.test_dataset = random_split(dataset, test_size)
 
-    def get_train_dataloader(self, batch_size=16, frac=0.3, iid=True):
+        self.poison_test_idxs = poison_test_idx(test_dataset=self.test_dataset, poison_label_swap=poison_label_swap)
+        self.poison_test_dataset = Subset(self.test_dataset, self.poison_test_idxs)
+
+    def get_train_dataloader(self, batch_size=32, frac=0.3, iid=True):
         if iid:
             num_items = int(len(self.train_dataset) * frac)
             idxs = iid_sampling(self.train_dataset, num_items)
             edge_dataset = Subset(self.train_dataset, list(idxs))
             return DataLoader(edge_dataset, batch_size=batch_size, shuffle=True)
 
-    def get_test_dataloader(self, batch_size=16):
-        return DataLoader(self.test_dataset, batch_size=16, shuffle=True)
+    def get_test_dataloader(self, batch_size=32):
+        return DataLoader(self.test_dataset, batch_size=32, shuffle=True)
+
+    def get_test_poison_loader(self, batch_size=32):
+        return DataLoader(self.poison_test_dataset, batch_size=32, shuffle=True)
 
 
 

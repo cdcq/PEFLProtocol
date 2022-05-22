@@ -1,17 +1,17 @@
 # import copy
 # from logging import Logger
 # from matplotlib import image
-# from ML_utils.get_data import load_data
-from ML_utils.test import get_poison_batch
+# from ML_utils.get_images import load_images
 
 import torch
-from torch.nn import CrossEntropyLoss
-import torch.nn as nn
+# from torch.nn import CrossEntropyLoss
+from torch import nn
 import torch.nn.functional as F
 from torch.optim import SGD
+from ML_utils.poison import get_poison_batch
 import yaml
 
-# def local_update(model, dataloader,
+# def local_update(model, imagesloader,
 #                  lr=0.01, momentum=0.0, local_eps=1,
 #                  device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
 #     momentum = 0.9
@@ -23,7 +23,7 @@ import yaml
 #     accumulated_grads_local = []
 #     for epoch in range(local_eps):
 #         batch_loss = []
-#         for images, labels in dataloader:
+#         for images, labels in imagesloader:
 #             images, labels = images.to(device), labels.to(device)
 #             model.zero_grad()
 #             probs = model(images)
@@ -47,11 +47,10 @@ import yaml
 #     accumulated_grads_local = [grad.cpu() for grad in accumulated_grads_local]
 #     return accumulated_grads_local, sum(epoch_loss) / len(epoch_loss)
 
-def local_update(model, dataloader,
-                 lr=0.01, momentum=0.0, local_eps=1,
+def local_update(model, dataloader, loss_fn,
+                 lr=0.01, momentum=0.9, local_eps=1,
                  device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
-    momentum = 0.9
-    loss_fn = CrossEntropyLoss()
+
     optimizer = SGD(model.parameters(), lr=lr, momentum=momentum)
     model.train()
     epoch_loss = []
@@ -77,52 +76,46 @@ def local_update(model, dataloader,
 
 def poison_local_update(model, dataloader, trainer_count,
                         edge_id=0,
-                        lr=0.01, momentum=0.0, local_eps=1, params_loader=None,
+                        lr=0.005, momentum=0.9, local_eps=2,
                         device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
     model.train()
-    poison_lr = params_loader['poison_lr']
-    internal_epoch_num = params_loader['internal_poison_epochs']
-    step_lr = params_loader['poison_step_lr']
-
-    poison_optimizer = torch.optim.SGD(model.parameters(),
-                                       lr=poison_lr,
-                                       momentum=params_loader['momentum'],
-                                       weight_decay=params_loader['decay'])
+    poison_optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
     epoch_loss = []
     grads_local = [para.detach().clone() for para in model.parameters()]
     for epoch in range(local_eps):
         total_loss = 0.
         correct = 0
         batch_loss = []
-        poison_data_count = 0
+        poison_images_count = 0
         for batch_idx, batch in enumerate(dataloader):
-            data, targets, poison_num = get_poison_batch(batch, adversarial_index=edge_id % 4,
-                                                         evaluation=False, params_loader=params_loader)
+            images, labels, poison_num = get_poison_batch(batch, adversarial_index=edge_id,
+                                                         evaluation=False, device=device)
+            images, labels = images.to(device), labels.to(device)
             poison_optimizer.zero_grad()
-            poison_data_count += poison_num
+            poison_images_count += poison_num
 
-            output = model(data)
-            class_loss = nn.functional.cross_entropy(output, targets)
+            output = model(images)
+            class_loss = nn.functional.cross_entropy(output, labels)
             # distance_loss = model_dist_norm_var(model, device)
             loss = class_loss
             loss.backward()
             poison_optimizer.step()
-            total_loss += loss.data
-            pred = output.data.max(1)[1]
-            correct += pred.eq(targets.data.view_as(pred)).cpu().sum().item()
+            total_loss += loss.item()
+            # pred = output.images.max(1)[1]
+            # correct += pred.eq(labels.images.view_as(pred)).cpu().sum().item()
+            correct += (output.argmax(1) == labels).type(torch.float).sum().item()
             batch_loss.append(loss.item())
 
         epoch_loss.append(sum(batch_loss) / len(batch_loss))
-
         acc = float(correct) / len(dataloader.dataset)
-        total_l = total_loss / len(dataloader)
+        total_loss /= len(dataloader)
         print('+++PoisonTrain edge_id = {} internal_epoch {:>3d} '
-              'Average loss: {:.4f} Accuracy: {:.2%}'.format(edge_id, epoch, total_l, acc))
+              'Average loss: {:.4f} Accuracy: {:.2%}'.format(edge_id, epoch, total_loss, acc))
 
     for idx, para in enumerate(model.parameters()):
         # -变换量 / 学习率，可以视为带momentum的梯度累计值
         # grads_local[idx] = trainer_count * ((grads_local[idx] - para) / lr)
-        grads_local[idx] = (trainer_count * ((grads_local[idx] - para) / lr)) * 0.18
+        grads_local[idx] = (trainer_count * ((grads_local[idx] - para) / lr)) * 0.6
 
     return grads_local, sum(epoch_loss) / len(epoch_loss)
 
@@ -140,7 +133,7 @@ def model_dist_norm_var(model, target_params_variables, device, norm=2):
 
     return torch.norm(sum_var, norm)
 
-# def poison_local_update(model, dataloader, edge_id=0,
+# def poison_local_update(model, imagesloader, edge_id=0,
 #                  lr=0.01, momentum=0.0, local_eps=1, params_loader=None,
 #                  device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
 #     # model.copy_params(target_model.state_dict())
@@ -160,22 +153,22 @@ def model_dist_norm_var(model, target_params_variables, device, norm=2):
 #         total_loss = 0.
 #         correct = 0
 #         batch_loss = []
-#         poison_data_count = 0
-#         for batch_idx, batch in enumerate(dataloader):
-#             data, targets, poison_num = get_poison_batch(batch, adversarial_index=edge_id%4,
+#         poison_images_count = 0
+#         for batch_idx, batch in enumerate(imagesloader):
+#             images, labels, poison_num = get_poison_batch(batch, adversarial_index=edge_id%4,
 #                                                          evaluation=False, params_loader=params_loader)
 #             poison_optimizer.zero_grad()
-#             poison_data_count += poison_num
+#             poison_images_count += poison_num
 #
-#             output = model(data)
-#             class_loss = nn.functional.cross_entropy(output, targets)
+#             output = model(images)
+#             class_loss = nn.functional.cross_entropy(output, labels)
 #
 #             loss = class_loss
 #             loss.backward()
 #             poison_optimizer.step()
-#             total_loss += loss.data
-#             pred = output.data.max(1)[1]
-#             correct += pred.eq(targets.data.view_as(pred)).cpu().sum().item()
+#             total_loss += loss.images
+#             pred = output.images.max(1)[1]
+#             correct += pred.eq(labels.images.view_as(pred)).cpu().sum().item()
 #
 #             # 累积梯度记录
 #             if len(accumulated_grads_local) == 0:
@@ -190,8 +183,8 @@ def model_dist_norm_var(model, target_params_variables, device, norm=2):
 #
 #         epoch_loss.append(sum(batch_loss) / len(batch_loss))
 #
-#         acc = float(correct) / len(dataloader.dataset)
-#         total_l = total_loss / len(dataloader)
+#         acc = float(correct) / len(imagesloader.imagesset)
+#         total_l = total_loss / len(imagesloader)
 #         print('+++PoisonTrain edge_id = {} internal_epoch {:>3d} '
 #               'Average loss: {:.4f} Accuracy: {:.2%}'.format(edge_id, epoch, total_l, acc))
 #

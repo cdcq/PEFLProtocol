@@ -47,7 +47,8 @@ class Trainer(KeyRequester):
     def round_run(self, gradient: [float]) -> [float]:
         print('A new round is started. User name: {0}.'.format(self.user_name))
         self.round_id = -1
-        self.gradient = arr_enc(gradient, self.pkc, self.precision)
+        # self.gradient = arr_enc(gradient, self.pkc, self.precision)
+        self.gradient = gradient
 
         self.round_ready()
         return self.get_model()

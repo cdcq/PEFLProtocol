@@ -18,11 +18,11 @@ CALCULATE_MODEL_LENGTH = {
 class Config:
     DIR_OF_AUTH = "cert"
     KGC_ADDR_PORT = ('127.0.0.1', 8700)
-    # CP_ADDR_PORT = ('127.0.0.1', 8701)
-    # SP_ADDR_PORT = ('127.0.0.1', 8702)
+    CP_ADDR_PORT = ('127.0.0.1', 8701)
+    SP_ADDR_PORT = ('127.0.0.1', 8702)
     # KGC_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
-    CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
-    SP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
+    # CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
+    # SP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
     TIME_OUT = 300
 
     TASK = 0

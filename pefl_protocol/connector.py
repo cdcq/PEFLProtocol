@@ -36,5 +36,9 @@ class Connector:
                 print('Connection has been refused, trying to reconnect.')
                 sleep(2)
                 continue
+            except TimeoutError:
+                print("Connection timeout, trying to reconnect.")
+                sleep(2)
+                continue
 
         return self.context.wrap_socket(conn)

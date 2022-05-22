@@ -32,8 +32,8 @@ class KeyGenerator(BaseService):
                              time_out, max_connection)
 
         # Very slow operation !!!
-        self.pkx, self.skx = paillier.generate_paillier_keypair()
-        self.pkc, self.skc = paillier.generate_paillier_keypair()
+        self.pkx, self.skx = paillier.generate_paillier_keypair(n_length=256)
+        self.pkc, self.skc = paillier.generate_paillier_keypair(n_length=256)
 
         self.users_path = users_path
 

@@ -53,6 +53,7 @@ import yaml
 def local_update(model, dataloader, edge_id, round_id,
                  lr=0.01, momentum=0.9, local_eps=1,
                  device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
+
     model.train()
     loss_fn = nn.CrossEntropyLoss()
     optimizer = SGD(model.parameters(), lr=lr, momentum=momentum)
@@ -67,15 +68,16 @@ def local_update(model, dataloader, edge_id, round_id,
             preds = model(images)
             correct += (preds.argmax(1) == labels).type(torch.float).sum().item()
             loss = loss_fn(preds, labels)
+            total_batch_loss += loss.item()
             loss.backward()
             optimizer.step()
-            total_batch_loss += loss.item()
+
 
         total_batch_loss /= len(dataloader)
         epoch_loss.append(total_batch_loss)
         acc = float(correct) / len(dataloader.dataset)
-        print_train('edge_id = {} round_id = {:>3d} internal_epoch {:>2d} Average loss: {:.4f}  Accuracy: {:.2%}'.format(
-            edge_id, round_id, epoch, total_batch_loss, acc))
+        print_train('round = {:>2d} edge = {} internal_epoch {:>2d} Average loss: {:.4f}  Accuracy: {:.2%}'.format(
+            round_id, edge_id, epoch, total_batch_loss, acc))
 
     for idx, para in enumerate(model.parameters()):
         # -变换量 / 学习率，可以视为带momentum的梯度累计值
@@ -113,8 +115,8 @@ def poison_local_update(model, dataloader,
         total_batch_loss /= len(dataloader)
         epoch_loss.append(total_batch_loss)
         acc = float(correct) / len(dataloader.dataset)
-        print_poison_train('edge_id = {} round_id = {:>3d} internal_epoch {:>2d} Average loss: {:.4f}  Accuracy: {:.2%}'.format(
-            edge_id, round_id, epoch, total_batch_loss, acc))
+        print_poison_train('round = {:>2d} edge = {} internal_epoch {:>2d} Average loss: {:.4f}  Accuracy: {:.2%}'.format(
+            round_id, edge_id, epoch, total_batch_loss, acc))
 
     for idx, para in enumerate(model.parameters()):
         # -变换量 / 学习率，可以视为带momentum的梯度累计值

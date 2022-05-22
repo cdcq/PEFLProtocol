@@ -116,8 +116,7 @@ class DatasetSource:
         elif dataset_name == "CNNDetection":
             dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
             train_size, test_size = int(len(dataset)*0.8), len(dataset) - int(len(dataset)*0.8)
-            self.train_dataset = random_split(dataset, train_size)
-            self.test_dataset = random_split(dataset, test_size)
+            self.train_dataset, self.test_dataset = random_split(dataset, (train_size, test_size)   )
 
         self.poison_test_idxs = poison_test_idx(test_dataset=self.test_dataset, poison_label_swap=poison_label_swap)
         self.poison_test_dataset = Subset(self.test_dataset, self.poison_test_idxs)

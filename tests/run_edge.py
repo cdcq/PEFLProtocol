@@ -15,7 +15,7 @@ if __name__ == "__main__":
     sp_connector = make_sp_connector()
     edge = make_trainer(kgc_connector, sp_connector)
 
-    # TODO: edge_id = sys.argv[1]
+
     edge_id = sys.argv[1]
     model = get_model(model_name=Config.MODEL_NAME, device=Config.DEVICE)
     data_source = DatasetSource(dataset_name=Config.DATASET_NAME, poison_label_swap=Config.POISON_SWAP_LABEL)

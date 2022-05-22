@@ -40,6 +40,7 @@ def test_model(model, test_dataloader, loss_fn, device, epoch, is_poison: bool, 
                                                           adversarial_index=-1, evaluation=True, poison_label_swap=1,
                                                           save_flag=flag if epoch == 0 else 0)
             flag = 0
+
         images, labels = images.to(device), labels.to(device)
         with torch.no_grad():
             preds = model(images)
@@ -50,11 +51,11 @@ def test_model(model, test_dataloader, loss_fn, device, epoch, is_poison: bool, 
     total_acc = correct / len(test_dataloader.dataset)
 
     if is_poison == False:
-        print_test('Test {} poisoned: {}, epoch: {}: Average loss: {:.4f}, Accuracy: {}/{} ({:.2%}%)'
-              .format(model.name, is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
+        print_test('poisoned: {}, round: {} Average loss: {:.4f}, Accuracy: {}/{} ({:.2%})'
+              .format(is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
     else:
-        print_poison_test('Test {} poisoned: {}, epoch: {}: Average loss: {:.4f}, Accuracy: {}/{} ({:.2%}%)'
-              .format(model.name, is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
+        print_poison_test('poisoned: {},  round: {} Average loss: {:.4f}, Accuracy: {}/{} ({:.2%})'
+              .format(is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
 
 
 # def test_model(test_set, model, loss_fn, device):

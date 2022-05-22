@@ -10,14 +10,14 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 def print_train(input):
-    print(bcolors.OKGREEN + "[Train] " + bcolors.ENDC + input)
+    print(bcolors.OKGREEN + "[Train]  " + bcolors.ENDC + input)
 
 def print_poison_train(input):
     print(bcolors.FAIL + "[Poison] " + bcolors.ENDC + input)
 
 def print_test(input):
-    print(bcolors.OKBLUE + "[Test] " + bcolors.ENDC + input)
+    print(bcolors.OKBLUE + "[Test1]  " + bcolors.ENDC + input)
 
 def print_poison_test(input):
-    print(bcolors.WARNING + "[Test] " + bcolors.ENDC + input)
+    print(bcolors.WARNING + "[Test2]  " + bcolors.ENDC + input)
 

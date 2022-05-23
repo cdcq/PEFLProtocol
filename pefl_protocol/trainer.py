@@ -71,7 +71,7 @@ class Trainer(KeyRequester):
 
         self.round_id = msg[MessageItems.DATA]
 
-        gc = arr_enc(self.gradient, self.pkc)
+        gc = arr_enc(self.gradient, self.pkc, self.precision)
         msg = {
             MessageItems.PROTOCOL: Protocols.ROUND_READY,
             MessageItems.ID: self.round_id,
@@ -102,7 +102,7 @@ class Trainer(KeyRequester):
                 break
 
         model = [paillier.EncryptedNumber(self.skx.public_key, data[i]) for i in range(len(data))]
-        ret = arr_dec(model, self.skx)
+        ret = arr_dec(model, self.skx, self.precision)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.GET_MODEL,

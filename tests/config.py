@@ -23,18 +23,19 @@ class Config:
     # KGC_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
     # CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
     # SP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
-    TIME_OUT = 300
+    TIME_OUT = 3600
 
     TASK = 0
     DATASET_NAME = DATASET[TASK]
     MODEL_NAME = MODEL[TASK]
     MODEL_LENGTH = CALCULATE_MODEL_LENGTH[TASK]
     TRAINERS_COUNT = 3
-    MAX_ROUND = 1000
+    MAX_ROUND = 100
     LEARNING_RATE = 0.01
     DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     BATCH_SIZE = 32
 
     POISON_SWAP_LABEL = 1
+    PRECISION = 26
 
 

@@ -3,8 +3,6 @@
 .idea/PEFLProtocol.iml
 
 tests/data/
-tests/saved_images
-tests/saved_models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

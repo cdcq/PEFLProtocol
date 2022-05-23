@@ -2,6 +2,7 @@ import os
 import sys
 import torch
 sys.path.append(os.path.join(sys.path[0], ".."))
+from torch.utils.tensorboard import SummaryWriter
 
 from pefl_protocol.helpers import flatten, yield_accumulated_grads, de_flatten
 from ML_utils.get_data import DatasetSource
@@ -21,6 +22,8 @@ if __name__ == "__main__":
     test_dataloader = data_source.get_test_dataloader()
     test_poison_dataloader = data_source.get_test_poison_loader()
     loss_fn = torch.nn.CrossEntropyLoss()
+
+    writer = SummaryWriter(f'runs/task_{Config.TASK}', flush_secs=60)
 
     edge_dataloaders = []
     for edge_id in range(Config.TRAINERS_COUNT):
@@ -59,5 +62,5 @@ if __name__ == "__main__":
         print("")
 
         if (round_id+1) % 5 == 0:
-            model_save_path = os.path.join("saved_models", f"task_{Config.TASK}", f"round_{round_id+1}.pt")
+            model_save_path = os.path.join("saved", "models", f"task_{Config.TASK}", f"round_{round_id + 1}.pt")
             torch.save(model.state_dict(), model_save_path)

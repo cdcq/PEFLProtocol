@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 
 sys.path.append(os.path.join(sys.path[0], ".."))
 
@@ -15,7 +16,7 @@ def make_kgc_connector():
     kgc_connector = Connector(
         service=Config.KGC_ADDR_PORT,
         ca_path=os.path.join(Config.DIR_OF_AUTH, "kgc.crt"),
-        time_out=Config.TIME_OUT
+        time_out=Config.TIME_OUT,
     )
     return kgc_connector
 
@@ -49,6 +50,9 @@ def make_kgc():
 
 
 def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvider:
+    with open(os.path.join("init_weights_vectors", f"task_{Config.TASK}.txt"), 'r') as read_file:
+        init_weights_vector = json.load(read_file)
+
     sp = ServiceProvider(
         listening=Config.SP_ADDR_PORT,
         cert_path=os.path.join(Config.DIR_OF_AUTH, "sp.crt"),
@@ -56,11 +60,13 @@ def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvide
         key_generator=kgc_connector,
         cloud_provider=cp_connector,
         token_path=os.path.join(Config.DIR_OF_AUTH, "token", "sp.yml"),
+        model = init_weights_vector,
         learning_rate=0.01,
         trainers_count=Config.TRAINERS_COUNT,
         train_round=Config.MAX_ROUND,
         model_length=Config.MODEL_LENGTH,
-        time_out=Config.TIME_OUT
+        time_out=Config.TIME_OUT,
+        precision=Config.PRECISION
     )
     return sp
 
@@ -72,7 +78,8 @@ def make_cp(kgc_connector: Connector) -> CloudProvider:
         key_path=os.path.join(Config.DIR_OF_AUTH, 'cp.key'),
         key_generator=kgc_connector,
         token_path=os.path.join(Config.DIR_OF_AUTH, "token", "cp.yml"),
-        time_out=Config.TIME_OUT
+        time_out=Config.TIME_OUT,
+        precision=Config.PRECISION
     )
     return cp
 
@@ -83,5 +90,6 @@ def make_trainer(kgc_connector: Connector, sp_connector: Connector):
         service_provider=sp_connector,
         token_path=os.path.join(Config.DIR_OF_AUTH, "token", "edge.yml"),
         model_length=Config.MODEL_LENGTH,
+        precision=Config.PRECISION
     )
     return trainer

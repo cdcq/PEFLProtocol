@@ -173,8 +173,8 @@ class CloudProvider(BaseService, KeyRequester):
         rx = [paillier.EncryptedNumber(self.skc.public_key, rx[i]) for i in range(len(rx))]
         ry = [paillier.EncryptedNumber(self.skc.public_key, ry[i]) for i in range(len(ry))]
 
-        dx = arr_dec(rx, self.skc)
-        dy = arr_dec(ry, self.skc)
+        dx = arr_dec(rx, self.skc, self.precision)
+        dy = arr_dec(ry, self.skc, self.precision)
         n = len(dx)
 
         rho = float(numpy.corrcoef(dx, dy)[0][1])
@@ -211,17 +211,19 @@ class CloudProvider(BaseService, KeyRequester):
         g = msg[MessageItems.DATA]['g']
 
         g = [[paillier.EncryptedNumber(self.skc.public_key, i) for i in j] for j in g]
-        gm = [arr_dec(i, self.skc) for i in g]
+        gm = [arr_dec(i, self.skc, self.precision) for i in g]
         m = self.trainers_count
         n = len(gm[0])
 
         sum_mu = sum(self.mu)
         # "k" is the aggregate formula mentioned in PEFL paper.
-        k = [nu * self.mu[i] / (m * sum_mu) for i in range(m)]
+
+        small_number = 1e-6
+        k = [nu * self.mu[i] / (m * sum_mu + small_number) for i in range(m)]
         ex = [[k[i] * gm[i][j] for j in range(n)] for i in range(m)]
 
-        kc = arr_enc(k, self.skc.public_key)
-        exc = [arr_enc(ex[i], self.skc.public_key) for i in range(m)]
+        kc = arr_enc(k, self.skc.public_key, self.precision)
+        exc = [arr_enc(ex[i], self.skc.public_key, self.precision) for i in range(m)]
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: {
@@ -229,6 +231,7 @@ class CloudProvider(BaseService, KeyRequester):
                 'k': [i.ciphertext() for i in kc]
             }
         }
+        print("mu =", self.mu)
         send_obj(conn, msg)
 
     def exchange_handler(self, conn: ssl.SSLSocket):
@@ -252,7 +255,7 @@ class CloudProvider(BaseService, KeyRequester):
         omega = [paillier.EncryptedNumber(self.skc.public_key, data[i])
                  for i in range(len(data))]
 
-        omega_x = arr_enc(arr_dec(omega, self.skc), self.pkx)
+        omega_x = arr_enc(arr_dec(omega, self.skc, self.precision), self.pkx, self.precision)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,

@@ -29,7 +29,7 @@ def get_poison_batch(batch, task, adversarial_index=-1, evaluation=False, poison
 
             # 保存图片
             if save_flag == 1:
-                save_path = os.path.join("saved_images", f"task_{task}", f"{index}.png")
+                save_path = os.path.join("saved", "images", f"task_{task}", f"{index}.png")
                 # before_unnormalize_image = new_images[index]
                 image = transform_invert(new_images[index])
                 utils.save_image(image, save_path)

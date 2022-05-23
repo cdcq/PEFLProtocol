@@ -10,6 +10,7 @@ cp = ServiceProvider(listening, cert_path, key_path, key_generator, cloud_provid
 cp.run()
 
 """
+import time
 
 from phe import paillier
 from random import random, getrandbits
@@ -24,7 +25,7 @@ from pefl_protocol.key_generator import KeyRequester
 class ServiceProvider(BaseService, KeyRequester):
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
                  key_generator: Connector, cloud_provider: Connector,
-                 token_path: str,
+                 token_path: str, model: [float],
                  model_length: int, learning_rate: float,
                  trainers_count: int, train_round: int,
                  time_out=10, max_connection=5,
@@ -40,7 +41,7 @@ class ServiceProvider(BaseService, KeyRequester):
         self.learning_rate = learning_rate
         self.precision = precision
 
-        self.model = []
+        self.model = model
         self.gradient = [[] for _ in range(self.trainers_count)]
         self.model_x = []
         self.is_ready = False
@@ -50,25 +51,34 @@ class ServiceProvider(BaseService, KeyRequester):
 
     def run(self):
         # self.model = self.init_model()
-        self.model = arr_enc(self.model, self.pkc)
+        self.model = arr_enc(self.model, self.pkc, self.precision)
 
         for round_number in range(1, self.train_round + 1):
             self.round(round_number)
 
     def round(self, round_number):
+
+        print(time.asctime(time.localtime(time.time())))
         print('Round {0} is started, waiting for trainers ready.'.format(round_number))
         self.round_ready()
+
+        print(time.asctime(time.localtime(time.time())))
         print('All trainers are ready.')
         self.cloud_init()
 
+        print(time.asctime(time.localtime(time.time())))
         print('Start SEC_MED.')
         gm = self.medians_protocol()
+        print(time.asctime(time.localtime(time.time())))
         print('Start SEC_PER.')
         for i in range(self.trainers_count):
             self.pearson_protocol(self.gradient[i], gm, i)
 
+        print(time.asctime(time.localtime(time.time())))
         print('Start SEC_AGG.')
         self.aggregate_protocol()
+
+        print(time.asctime(time.localtime(time.time())))
         print('Start SEC_EXC.')
         self.exchange_protocol()
 
@@ -85,7 +95,7 @@ class ServiceProvider(BaseService, KeyRequester):
         :return: None.
         """
 
-        self.sock.listen(1)
+        self.sock.listen(5)
 
         self.is_ready = False
         ready_list = []
@@ -175,7 +185,7 @@ class ServiceProvider(BaseService, KeyRequester):
         m, n = self.trainers_count, arr_enc_len(self.model_length)
         # TODO: is random suitable?
         r = [random() for _ in range(self.model_length)]
-        r = arr_enc(r, self.pkc)
+        r = arr_enc(r, self.pkc, self.precision)
 
         r1 = [[(self.gradient[i][j] + r[j]).ciphertext() for j in range(n)] for i in range(m)]
 
@@ -314,7 +324,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
         n = arr_enc_len(self.model_length)
         r = [random() for _ in range(self.model_length)]
-        rc = arr_enc(r, self.pkc)
+        rc = arr_enc(r, self.pkc, self.precision)
         r1 = [self.model[i] + rc[i] for i in range(n)]
 
         msg = {
@@ -326,7 +336,7 @@ class ServiceProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
         self.model_x = [paillier.EncryptedNumber(self.pkx, i) for i in data]
-        rc = arr_enc(r, self.pkx)
+        rc = arr_enc(r, self.pkx, self.precision)
         self.model_x = [self.model_x[i] - rc[i] for i in range(n)]
 
         print('SecExch OK.')
@@ -344,7 +354,7 @@ class ServiceProvider(BaseService, KeyRequester):
         :return: None.
         """
 
-        self.sock.listen(1)
+        self.sock.listen(5)
 
         distribute_list = []
         while len(distribute_list) < self.trainers_count:

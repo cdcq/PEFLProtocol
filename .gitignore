@@ -1,8 +1,9 @@
 .idea/
-.idea/misc.xml
-.idea/PEFLProtocol.iml
+.vscode
 
+tests/.idea
 tests/data/
+tests/saved/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

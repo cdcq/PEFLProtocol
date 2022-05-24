@@ -31,7 +31,7 @@ def get_poison_batch(batch, task, adversarial_index=-1, evaluation=False, poison
             if save_flag == 1:
                 save_path = os.path.join("saved", "images", f"task_{task}", f"{index}.png")
                 # before_unnormalize_image = new_images[index]
-                image = transform_invert(new_images[index])
+                image = transform_invert(img=new_images[index], task=task)
                 utils.save_image(image, save_path)
                 # read_image = io.read_image(save_path)
                 # trans_mnist = transforms.Compose([transforms.ToPILImage(),

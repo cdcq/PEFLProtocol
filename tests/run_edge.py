@@ -21,8 +21,8 @@ if __name__ == "__main__":
     model = get_model(model_name=Config.MODEL_NAME, device=Config.DEVICE)
     # 统一初始化
     with open(os.path.join("init_weights_vectors", f"task_{Config.TASK}.txt"), 'r') as read_file:
-        init_weights_vector = json.load(read_file)
-    de_flatten(vector=init_weights_vector, model=model)
+        weights_vector = json.load(read_file)
+    de_flatten(vector=weights_vector, model=model)
 
     data_source = DatasetSource(dataset_name=Config.DATASET_NAME, poison_label_swap=Config.POISON_SWAP_LABEL)
     train_dataloader = data_source.get_train_dataloader(batch_size=Config.BATCH_SIZE, frac=0.3)
@@ -37,8 +37,13 @@ if __name__ == "__main__":
             grads_list, local_loss = local_update(model=model, dataloader=train_dataloader,
                                                   edge_id=edge_id, round_id=round_id)
 
+        print("weights_vector[:10] =", weights_vector[:10])
         print(time.asctime(time.localtime(time.time())))
         grads_vector = flatten(yield_accumulated_grads(grads_list))
+        print("grads_vector[:10] =", grads_vector[:10])
         weights_vector = edge.round_run(gradient=grads_vector)
+        print("weights_vector[:10] =", weights_vector[:10])
+
         de_flatten(vector=weights_vector, model=model)
         print(time.asctime(time.localtime(time.time())))
+

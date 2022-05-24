@@ -1,5 +1,4 @@
 import os
-from PIL import Image
 
 import torch
 import numpy as np
@@ -7,34 +6,44 @@ from torchvision import datasets, transforms
 from torchvision.io import read_image
 from torch.utils.data import Subset, Dataset, DataLoader, random_split, sampler
 
+Transform_CUS = {
+    0: transforms.Compose([
+        # transforms.ToPILImage(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ]),
 
-trans_mnist = transforms.Compose([transforms.ToTensor(),
-                                  transforms.Normalize((0.1307,), (0.3081,))])
+    1: transforms.Compose([
+        # transforms.ToPILImage(),
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ]),
 
-trans_cifar10 = transforms.Compose([transforms.RandomCrop(32, padding=4),
-                                    transforms.RandomHorizontalFlip(),
-                                    transforms.ToTensor(),
-                                    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+    2: transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+}
+
 
 # trans_cifar10 = transforms.Compose([transforms.ToTensor(),
 #                                         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
 
-trans_CNNDetction = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-])
 
-def transform_invert(img, transform_train=trans_mnist):
+
+def transform_invert(img, task):
     """
     将data 进行反transfrom操作,并保存图像
-    :param img_: tensor
-    :param transform_train: torchvision.transforms
+    :param img: tensor
+    :param task: torchvision.transforms
     :return: PIL image
     """
-    if 'Normalize' in str(transform_train):
-        norm_transform = list(filter(lambda x: isinstance(x, transforms.Normalize), transform_train.transforms))
+    if 'Normalize' in str(Transform_CUS[task]):
+        norm_transform = list(filter(lambda x: isinstance(x, transforms.Normalize), Transform_CUS[task].transforms))
         mean = torch.tensor(norm_transform[0].mean, dtype=img.dtype, device=img.device)
         std = torch.tensor(norm_transform[0].std, dtype=img.dtype, device=img.device)
         new_img = img.mul(std[:, None, None]).add(mean[:, None, None])
@@ -53,7 +62,7 @@ def transform_invert(img, transform_train=trans_mnist):
 
 
 class CNNDection(Dataset):
-    def __init__(self, img_dir, transform=trans_CNNDetction, target_transform=None):
+    def __init__(self, img_dir, transform=Transform_CUS[2], target_transform=None):
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
@@ -108,11 +117,11 @@ def poison_test_idx(test_dataset ,poison_label_swap=1) -> [int]:
 class DatasetSource:
     def __init__(self, dataset_name, poison_label_swap=1):
         if dataset_name == "mnist":
-            self.train_dataset = datasets.MNIST('data/mnist/', train=True, download=True, transform=trans_mnist)
-            self.test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=trans_mnist)
+            self.train_dataset = datasets.MNIST('data/mnist/', train=True, download=True, transform=Transform_CUS[0])
+            self.test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=Transform_CUS[0])
         elif dataset_name == "cifar-10":
-            self.train_dataset = datasets.CIFAR10('data/cifar10', train=True, download=True, transform=trans_cifar10)
-            self.test_dataset = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10)
+            self.train_dataset = datasets.CIFAR10('data/cifar10', train=True, download=True, transform=Transform_CUS[1])
+            self.test_dataset = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=Transform_CUS[1])
         elif dataset_name == "CNNDetection":
             dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
             train_size, test_size = int(len(dataset)*0.8), len(dataset) - int(len(dataset)*0.8)

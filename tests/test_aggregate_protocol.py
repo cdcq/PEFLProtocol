@@ -26,7 +26,7 @@ g = [g0.copy() for _ in range(m)]
 
 for i in range(m):
     for j in range(n):
-        g[i][j] = g[i][j] + 0.001 * random()
+        g[i][j] = g[i][j] + 0.1 * random() - 0.05
 
 print('Encrypting g.')
 sp.gradient = [arr_enc(g[i], sp.pkc) for i in range(m)]
@@ -50,7 +50,9 @@ model2 = arr_dec(sp.model, cp.skc)
 
 sum_mu = sum(cp.mu)
 nu = sp.learning_rate
-k = [nu * cp.mu[i] / (m * sum_mu) for i in range(m)]
+small_number = 1e-6
+k = [nu * cp.mu[i] / (m * sum_mu + small_number) for i in range(m)]
+print("k:", k)
 
 model1 = model.copy()
 for i in range(m):

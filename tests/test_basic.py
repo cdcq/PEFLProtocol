@@ -1,8 +1,10 @@
 import os
 import sys
-import json
 
 sys.path.append(os.path.join(sys.path[0], ".."))
+
+import json
+from random import random
 
 from pefl_protocol.cloud_provider import CloudProvider
 from pefl_protocol.connector import Connector
@@ -50,8 +52,11 @@ def make_kgc():
 
 
 def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvider:
-    with open(os.path.join("init_weights_vectors", f"task_{Configs.TASK}.txt"), 'r') as read_file:
-        init_weights_vector = json.load(read_file)
+    if os.path.exists(os.path.join("init_weights_vectors", f"task_{Configs.TASK}.txt")):
+        with open(os.path.join("init_weights_vectors", f"task_{Configs.TASK}.txt"), 'r') as read_file:
+            init_weights_vector = json.load(read_file)
+    else:
+        init_weights_vector = [random() for _ in range(Configs.MODEL_LENGTH)]
 
     sp = ServiceProvider(
         listening=Configs.SP_ADDR_PORT,
@@ -60,7 +65,7 @@ def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvide
         key_generator=kgc_connector,
         cloud_provider=cp_connector,
         token_path=os.path.join(Configs.DIR_OF_AUTH, "token", "sp.yml"),
-        model = init_weights_vector,
+        model=init_weights_vector,
         learning_rate=0.01,
         trainers_count=Configs.TRAINERS_COUNT,
         train_round=Configs.MAX_ROUND,

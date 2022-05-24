@@ -220,6 +220,8 @@ class CloudProvider(BaseService, KeyRequester):
 
         small_number = 1e-6
         k = [nu * self.mu[i] / (m * sum_mu + small_number) for i in range(m)]
+        # TODO: Here is a ugly fix for a bug, need to change!
+        k = [i / (1 << self.precision) for i in k]
         ex = [[k[i] * gm[i][j] for j in range(n)] for i in range(m)]
 
         kc = arr_enc(k, self.skc.public_key, self.precision)
@@ -252,13 +254,13 @@ class CloudProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        omega = [paillier.EncryptedNumber(self.skc.public_key, data[i])
-                 for i in range(len(data))]
+        omega = [paillier.EncryptedNumber(self.skc.public_key, i)
+                 for i in data]
 
         omega_x = arr_enc(arr_dec(omega, self.skc, self.precision), self.pkx, self.precision)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
-            MessageItems.DATA: [omega_x[i].ciphertext() for i in range(len(omega_x))]
+            MessageItems.DATA: [i.ciphertext() for i in omega_x]
         }
         send_obj(conn, msg)

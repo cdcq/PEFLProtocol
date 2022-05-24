@@ -15,7 +15,8 @@ CALCULATE_MODEL_LENGTH = {
     2: 11177538
 }
 
-class Config:
+
+class Configs:
     DIR_OF_AUTH = "cert"
     KGC_ADDR_PORT = ('127.0.0.1', 8700)
     CP_ADDR_PORT = ('127.0.0.1', 8701)
@@ -37,5 +38,3 @@ class Config:
 
     POISON_SWAP_LABEL = 1
     PRECISION = 26
-
-

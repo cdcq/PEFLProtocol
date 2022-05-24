@@ -32,6 +32,7 @@ class KeyGenerator(BaseService):
                              time_out, max_connection)
 
         # Very slow operation !!!
+        # TODO: The 128 bit key is is only for test!!!
         self.pkx, self.skx = paillier.generate_paillier_keypair(n_length=128)
         self.pkc, self.skc = paillier.generate_paillier_keypair(n_length=128)
 

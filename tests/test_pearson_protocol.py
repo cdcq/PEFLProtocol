@@ -4,10 +4,10 @@ import threading
 from random import random
 
 from pefl_protocol.helpers import arr_enc
-from test_basic import Consts, make_kgc_connector, make_cp_connector, make_sp, make_cp
+from test_basic import Configs, make_kgc_connector, make_cp_connector, make_sp, make_cp
 
-Consts.TRAINERS_COUNT = 10
-Consts.MODEL_LENGTH = 20
+Configs.TRAINERS_COUNT = 10
+Configs.MODEL_LENGTH = 20
 
 kgc_connector = make_kgc_connector()
 cp_connector = make_cp_connector()
@@ -17,8 +17,8 @@ cp = make_cp(kgc_connector)
 t = threading.Thread(target=cp.run)
 t.start()
 
-n = Consts.MODEL_LENGTH
-m = Consts.TRAINERS_COUNT
+n = Configs.MODEL_LENGTH
+m = Configs.TRAINERS_COUNT
 
 gx = [random() for _ in range(n)]
 gy = [gx[i] + random() * 0.001 for i in range(n)]

@@ -13,13 +13,13 @@ from pefl_protocol.key_generator import KeyGenerator
 from pefl_protocol.cloud_provider import CloudProvider
 from pefl_protocol.service_provider import ServiceProvider
 from pefl_protocol.trainer import Trainer
-from test_basic import Consts
+from test_basic import Configs
 
 from ML_utils.model import get_model
 from ML_utils.local_update import local_update
 
 DIR_OF_AUTH = "cert"
-KGC_ADDR_PORT = Consts.KGC_ADDR_PORT
+KGC_ADDR_PORT = Configs.KGC_ADDR_PORT
 CP_ADDR_PORT = ('127.0.0.1', 8701)
 SP_ADDR_PORT = ('127.0.0.1', 8702)
 # KGC_ADDR_PORT = ('127.0.0.1', random.randint(1000, 9999))

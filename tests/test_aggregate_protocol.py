@@ -4,10 +4,10 @@ import threading
 from random import random
 
 from pefl_protocol.helpers import arr_enc, arr_dec
-from test_basic import Consts, make_kgc_connector, make_cp_connector, make_sp, make_cp
+from test_basic import Configs, make_kgc_connector, make_cp_connector, make_sp, make_cp
 
-Consts.TRAINERS_COUNT = 5
-Consts.MODEL_LENGTH = 5
+Configs.TRAINERS_COUNT = 5
+Configs.MODEL_LENGTH = 5
 
 kgc_connector = make_kgc_connector()
 cp_connector = make_cp_connector()
@@ -17,8 +17,8 @@ cp = make_cp(kgc_connector)
 t = threading.Thread(target=cp.run)
 t.start()
 
-n = Consts.MODEL_LENGTH
-m = Consts.TRAINERS_COUNT
+n = Configs.MODEL_LENGTH
+m = Configs.TRAINERS_COUNT
 
 g0 = [random() for _ in range(n)]
 
@@ -26,7 +26,7 @@ g = [g0.copy() for _ in range(m)]
 
 for i in range(m):
     for j in range(n):
-        g[i][j] = g[i][j] + 0.001 * random()
+        g[i][j] = g[i][j] + 0.1 * random() - 0.05
 
 print('Encrypting g.')
 sp.gradient = [arr_enc(g[i], sp.pkc) for i in range(m)]
@@ -50,7 +50,9 @@ model2 = arr_dec(sp.model, cp.skc)
 
 sum_mu = sum(cp.mu)
 nu = sp.learning_rate
-k = [nu * cp.mu[i] / (m * sum_mu) for i in range(m)]
+small_number = 1e-6
+k = [nu * cp.mu[i] / (m * sum_mu + small_number) for i in range(m)]
+print("k:", k)
 
 model1 = model.copy()
 for i in range(m):

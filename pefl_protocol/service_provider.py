@@ -12,6 +12,7 @@ cp.run()
 """
 import time
 
+from copy import deepcopy
 from phe import paillier
 from random import random, getrandbits
 
@@ -48,6 +49,8 @@ class ServiceProvider(BaseService, KeyRequester):
 
         self.pkc = self.request_key(Protocols.GET_PKC)
         self.pkx = self.request_key(Protocols.GET_PKX)
+
+        self.temp = []
 
     def run(self):
         # self.model = self.init_model()
@@ -273,8 +276,9 @@ class ServiceProvider(BaseService, KeyRequester):
         m, n = self.trainers_count, arr_enc_len(self.model_length)
 
         r = [random() for _ in range(m)]
-        r1 = [self.pkc.encrypt(int(i * (2 ** self.precision))) for i in r]
-        g1 = self.gradient.copy()
+        r = [int(i * (2 ** self.precision)) for i in r]
+        r1 = [self.pkc.encrypt(i) for i in r]
+        g1 = deepcopy(self.gradient)
         for i in range(m):
             for j in range(n):
                 g1[i][j] = g1[i][j] + r1[i]
@@ -335,9 +339,9 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        self.model_x = [paillier.EncryptedNumber(self.pkx, i) for i in data]
+        gx = [paillier.EncryptedNumber(self.pkx, i) for i in data]
         rc = arr_enc(r, self.pkx, self.precision)
-        self.model_x = [self.model_x[i] - rc[i] for i in range(n)]
+        self.model_x = [gx[i] - rc[i] for i in range(n)]
 
         print('SecExch OK.')
         msg = {

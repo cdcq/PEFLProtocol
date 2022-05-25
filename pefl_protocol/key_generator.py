@@ -27,13 +27,14 @@ class KeyGenerator(BaseService):
 
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
                  users_path: str,
-                 time_out=10, max_connection=5):
+                 time_out=10, max_connection=5,
+                 key_size=2048):
         BaseService.__init__(self, listening, cert_path, key_path,
                              time_out, max_connection)
 
         # Very slow operation !!!
-        self.pkx, self.skx = paillier.generate_paillier_keypair(n_length=128)
-        self.pkc, self.skc = paillier.generate_paillier_keypair(n_length=128)
+        self.pkx, self.skx = paillier.generate_paillier_keypair(n_length=key_size)
+        self.pkc, self.skc = paillier.generate_paillier_keypair(n_length=key_size)
 
         self.users_path = users_path
 

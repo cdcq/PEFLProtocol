@@ -34,10 +34,11 @@ gradient = [0.06068916991353035, 0.060690008103847504, 0.060690008103847504, 0.0
             0.06068935617804527, 0.060690008103847504, 0.06068900600075722, 0.06068916991353035, 0.060690008103847504]
 model2 = tr.round_run(gradient)
 
-# print(arr_dec(sp.temp, cp.skc))
+print(arr_dec(sp.temp, cp.skc))
 # print(arr_dec([paillier.EncryptedNumber(cp.skc.public_key, i) for i in sp.temp], cp.skc))
 # print(sp.temp[0].exponent)
 # print(paillier.EncryptedNumber(cp.skc.public_key, sp.temp[0]).exponent)
 
 for i in range(len(model)):
-    print(model[i], model2[i], abs(model[i] - model2[i]))
+    print(model[i], model2[i], abs(model[i] - model2[i]),
+          abs(model[i] - model2[i] - gradient[i] * Configs.LEARNING_RATE))

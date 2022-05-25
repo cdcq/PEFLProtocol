@@ -50,6 +50,7 @@ class ServiceProvider(BaseService, KeyRequester):
         self.pkc = self.request_key(Protocols.GET_PKC)
         self.pkx = self.request_key(Protocols.GET_PKX)
 
+        # Used for debug.
         self.temp = []
 
     def run(self):
@@ -296,8 +297,12 @@ class ServiceProvider(BaseService, KeyRequester):
         data = msg[MessageItems.DATA]
         ex = [[paillier.EncryptedNumber(self.pkc, data['ex'][i][j])
                for j in range(n)] for i in range(m)]
-        k = [paillier.EncryptedNumber(self.pkc, i) for i in data['k']]
-        fx = [[ex[i][j] - k[i] * r[i] for j in range(n)] for i in range(m)]
+        # k = [paillier.EncryptedNumber(self.pkc, i) for i in data['k']]
+        # Attention, k in here is plain text!
+        k = data['k']
+        # "r" in here is multiplied by 2^precision.
+        kr = [self.pkc.encrypt(int(k[i] * r[i])) for i in range(m)]
+        fx = [[ex[i][j] - kr[i] for j in range(n)] for i in range(m)]
 
         for i in range(m):
             for j in range(n):

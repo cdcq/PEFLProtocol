@@ -220,17 +220,18 @@ class CloudProvider(BaseService, KeyRequester):
 
         small_number = 1e-6
         k = [nu * self.mu[i] / (m * sum_mu + small_number) for i in range(m)]
-        # TODO: Here is a ugly fix for a bug, need to change!
-        k = [i / (1 << self.precision) for i in k]
         ex = [[k[i] * gm[i][j] for j in range(n)] for i in range(m)]
 
-        kc = arr_enc(k, self.skc.public_key, self.precision)
+        # TODO: Here is an ugly fix for a bug, need to change!
+        # kc = arr_enc(k, self.skc.public_key, self.precision)
         exc = [arr_enc(ex[i], self.skc.public_key, self.precision) for i in range(m)]
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: {
                 'ex': [[i.ciphertext() for i in j] for j in exc],
-                'k': [i.ciphertext() for i in kc]
+                # 'k': [i.ciphertext() for i in kc]
+                # Attention, k in here is plain text!
+                'k': k
             }
         }
         print("mu =", self.mu)

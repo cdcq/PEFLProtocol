@@ -39,7 +39,8 @@ if __name__ == "__main__":
             if exec_poisoning(round_id=round_id, edge_id=edge_id,
                               trainer_count=Configs.TRAINERS_COUNT, poison_freq=1, start_round=2):
                 grads_list, local_loss = poison_local_update(model=model, dataloader=edge_dataloaders[edge_id],
-                                                             trainer_count=Configs.TRAINERS_COUNT, edge_id=edge_id,
+                                                             trainer_count=Configs.TRAINERS_COUNT,
+                                                             edge_id=edge_id,
                                                              round_id=round_id, task=Configs.TASK)
             else:
                 grads_list, local_loss = local_update(model=model, dataloader=edge_dataloaders[edge_id],

@@ -87,7 +87,7 @@ def local_update(model, dataloader, edge_id, round_id,
 
 
 def poison_local_update(model, dataloader,
-                        trainer_count, task,
+                        trainer_count: int, task,
                         edge_id, round_id,
                         lr=0.005, momentum=0.9, local_eps=2,
                         device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):

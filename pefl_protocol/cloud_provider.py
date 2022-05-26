@@ -14,6 +14,7 @@ cp.run()
 
 """
 
+from audioop import mul
 import math
 import numpy
 import ssl
@@ -181,7 +182,9 @@ class CloudProvider(BaseService, KeyRequester):
 
         small_number = 1e-6
         # This is the weight formula mentioned in PEFL paper.
-        self.mu[x_id] = max(0.0, math.log((1 + rho) / (1 - rho + small_number)) - 0.5)
+        # self.mu[x_id] = max(0.0, math.log((1 + rho) / (1 - rho + small_number)) - 0.5)
+        self.mu[x_id] = max(0.0, math.log((1 + rho) / (1 - rho + small_number)) - 0.6)
+        
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER
@@ -218,7 +221,7 @@ class CloudProvider(BaseService, KeyRequester):
         sum_mu = sum(self.mu)
         # "k" is the aggregate formula mentioned in PEFL paper.
 
-        small_number = 1e-6
+        small_number = 1e-10
         k = [nu * self.mu[i] / (m * sum_mu + small_number) for i in range(m)]
         ex = [[k[i] * gm[i][j] for j in range(n)] for i in range(m)]
 

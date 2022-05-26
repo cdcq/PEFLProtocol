@@ -1,9 +1,10 @@
 .idea/
-.vscode
+.vscode/
 
-tests/.idea
+tests/.idea/
 tests/data/
 tests/saved/
+tests/runs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

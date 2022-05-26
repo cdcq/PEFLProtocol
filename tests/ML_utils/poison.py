@@ -1,7 +1,8 @@
 import copy
 import os.path
-from torchvision import utils,io, transforms
+from torchvision import utils
 from ML_utils.get_data import transform_invert
+
 
 def exec_poisoning(round_id: int, edge_id: int, trainer_count: int, poison_freq: int, start_round: int = 1) -> bool:
     # Decide whether execute poisoning or not

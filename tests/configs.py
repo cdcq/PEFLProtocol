@@ -18,12 +18,12 @@ CALCULATE_MODEL_LENGTH = {
 
 class Configs:
     DIR_OF_AUTH = "cert"
-    KGC_ADDR_PORT = ('127.0.0.1', 8700)
-    # CP_ADDR_PORT = ('127.0.0.1', 8701)
-    # SP_ADDR_PORT = ('127.0.0.1', 8702)
+    KGC_ADDR_PORT = ('127.0.0.1', 8710)
+    CP_ADDR_PORT = ('127.0.0.1', 8711)
+    SP_ADDR_PORT = ('127.0.0.1', 8712)
     # KGC_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
-    CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
-    SP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
+    # CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
+    # SP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
     TIME_OUT = 3600
 
     TASK = 0
@@ -35,6 +35,7 @@ class Configs:
     LEARNING_RATE = 0.01
     DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     BATCH_SIZE = 32
-
     POISON_SWAP_LABEL = 1
+
+    KEY_SIZE = 128
     PRECISION = 32

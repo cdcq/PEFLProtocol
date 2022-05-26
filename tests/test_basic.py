@@ -27,7 +27,7 @@ def make_sp_connector():
     sp_connector = Connector(
         service=Configs.SP_ADDR_PORT,
         ca_path=os.path.join(Configs.DIR_OF_AUTH, "kgc.crt"),
-        time_out=Configs.TIME_OUT
+        time_out=Configs.TIME_OUT,
     )
     return sp_connector
 
@@ -36,7 +36,7 @@ def make_cp_connector():
     cp_connector = Connector(
         service=Configs.CP_ADDR_PORT,
         ca_path=os.path.join(Configs.DIR_OF_AUTH, "kgc.crt"),
-        time_out=Configs.TIME_OUT
+        time_out=Configs.TIME_OUT,
     )
     return cp_connector
 
@@ -46,7 +46,8 @@ def make_kgc():
         listening=Configs.KGC_ADDR_PORT,
         cert_path=os.path.join(Configs.DIR_OF_AUTH, "kgc.crt"),
         key_path=os.path.join(Configs.DIR_OF_AUTH, "kgc.key"),
-        users_path=os.path.join(Configs.DIR_OF_AUTH, "token", "registered_users.yml")
+        users_path=os.path.join(Configs.DIR_OF_AUTH, "token", "registered_users.yml"),
+        key_size=Configs.KEY_SIZE,
     )
     return kgc
 
@@ -71,7 +72,7 @@ def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvide
         train_round=Configs.MAX_ROUND,
         model_length=Configs.MODEL_LENGTH,
         time_out=Configs.TIME_OUT,
-        precision=Configs.PRECISION
+        precision=Configs.PRECISION,
     )
     return sp
 
@@ -84,7 +85,7 @@ def make_cp(kgc_connector: Connector) -> CloudProvider:
         key_generator=kgc_connector,
         token_path=os.path.join(Configs.DIR_OF_AUTH, "token", "cp.yml"),
         time_out=Configs.TIME_OUT,
-        precision=Configs.PRECISION
+        precision=Configs.PRECISION,
     )
     return cp
 
@@ -95,6 +96,6 @@ def make_trainer(kgc_connector: Connector, sp_connector: Connector):
         service_provider=sp_connector,
         token_path=os.path.join(Configs.DIR_OF_AUTH, "token", "edge.yml"),
         model_length=Configs.MODEL_LENGTH,
-        precision=Configs.PRECISION
+        precision=Configs.PRECISION,
     )
     return trainer

@@ -13,6 +13,7 @@ public_key = krq.request_key(Protocols.GET_PKX)
 
 """
 
+import logging
 import ssl
 import yaml
 from phe import paillier
@@ -20,7 +21,7 @@ from phe import paillier
 from pefl_protocol.base_service import BaseService
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
-from pefl_protocol.helpers import send_obj, receive_obj
+from pefl_protocol.helpers import send_obj, receive_obj, make_logger
 
 
 class KeyGenerator(BaseService):
@@ -28,9 +29,15 @@ class KeyGenerator(BaseService):
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
                  users_path: str,
                  time_out=10, max_connection=5,
-                 key_size=2048):
+                 key_size=2048,
+                 logger: logging.Logger = None):
+        if logger is None:
+            self.logger = make_logger('KeyGenerator')
+        else:
+            self.logger = logger
+
         BaseService.__init__(self, listening, cert_path, key_path,
-                             time_out, max_connection)
+                             time_out, max_connection, logger=self.logger)
 
         # Very slow operation !!!
         self.pkx, self.skx = paillier.generate_paillier_keypair(n_length=key_size)
@@ -44,7 +51,6 @@ class KeyGenerator(BaseService):
         self.pkc: paillier.PaillierPublicKey
         self.skc: paillier.PaillierPrivateKey
 
-        print('Start a connection.')
         conn.settimeout(self.time_out)
 
         msg = receive_obj(conn)
@@ -56,7 +62,7 @@ class KeyGenerator(BaseService):
         if user_id not in users_list \
                 or users_list[user_id]['Token'] != msg[MessageItems.TOKEN]:
             conn.close()
-            print('The user info is wrong.')
+            self.logger.warning('The user info is wrong.')
             return
 
         user_right = users_list[user_id]['Right']
@@ -76,9 +82,8 @@ class KeyGenerator(BaseService):
         msg = receive_obj(conn)
         if msg[MessageItems.DATA] == 'OK':
             conn.close()
-            print('Closed a connection.')
         else:
-            print('A protocol ended incorrectly. Protocol ID: {0}.'.format(protocol))
+            self.logger.warning('A {} protocol ended incorrectly.'.format(protocol))
 
 
 def send_key(conn: ssl.SSLSocket, protocol, key):

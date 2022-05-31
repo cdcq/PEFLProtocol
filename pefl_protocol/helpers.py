@@ -20,9 +20,10 @@ plain = arr_dec(encrypted, self.private_key)
 """
 
 import json
+import logging
 import ssl
 import struct
-from math import ceil
+import sys
 from phe import paillier
 
 import torch
@@ -69,6 +70,16 @@ def arr_dec(cipher: [paillier.EncryptedNumber], private_key: paillier.PaillierPr
             precision=32) -> [float]:
     ret = [private_key.decrypt(i) / (2 ** precision) for i in cipher]
     return ret
+
+
+def make_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(level=logging.INFO)
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
 
 
 def yield_accumulated_grads(accumulated_grads):

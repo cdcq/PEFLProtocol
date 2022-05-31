@@ -14,7 +14,7 @@ cp.run()
 
 """
 
-from audioop import mul
+import logging
 import math
 import numpy
 import ssl
@@ -23,7 +23,7 @@ from phe import paillier
 from pefl_protocol.base_service import BaseService
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
-from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec
+from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec, make_logger
 from pefl_protocol.key_generator import KeyRequester
 
 
@@ -32,9 +32,15 @@ class CloudProvider(BaseService, KeyRequester):
                  key_generator: Connector,
                  token_path: str,
                  time_out=10, max_connection=5,
-                 precision=32):
+                 precision=32,
+                 logger: logging.Logger = None):
+        if logger is None:
+            self.logger = make_logger('CloudProvider')
+        else:
+            self.logger = logger
+
         BaseService.__init__(self, listening, cert_path, key_path,
-                             time_out, max_connection)
+                             time_out, max_connection, logger=self.logger)
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.precision = precision
@@ -56,10 +62,9 @@ class CloudProvider(BaseService, KeyRequester):
         """
 
         conn.settimeout(self.time_out)
-        print('Start a connection.')
         msg = receive_obj(conn)
-
         protocol = msg[MessageItems.PROTOCOL]
+
         if protocol == Protocols.CLOUD_INIT:
             self.clout_init(conn)
         elif protocol == Protocols.SEC_MED:
@@ -74,9 +79,8 @@ class CloudProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
         if msg[MessageItems.DATA] == 'OK':
             conn.close()
-            print('Closed a connection.')
         else:
-            print('A protocol ended incorrectly. Protocol ID: {0}.'.format(protocol))
+            self.logger.warning('A {} protocol ended incorrectly.'.format(protocol))
 
     def clout_init(self, conn: ssl.SSLSocket):
         """
@@ -180,11 +184,10 @@ class CloudProvider(BaseService, KeyRequester):
 
         rho = float(numpy.corrcoef(dx, dy)[0][1])
 
-        small_number = 1e-6
+        small_number = 1e-10
+        reject_number = 0.6
         # This is the weight formula mentioned in PEFL paper.
-        # self.mu[x_id] = max(0.0, math.log((1 + rho) / (1 - rho + small_number)) - 0.5)
-        self.mu[x_id] = max(0.0, math.log((1 + rho) / (1 - rho + small_number)) - 0.6)
-        
+        self.mu[x_id] = max(0.0, math.log((1 + rho) / (1 - rho + small_number)) - reject_number)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER
@@ -237,7 +240,7 @@ class CloudProvider(BaseService, KeyRequester):
                 'k': k
             }
         }
-        print("mu =", self.mu)
+        self.logger.info('SecAgg: the mu is\n{}'.format(self.mu))
         send_obj(conn, msg)
 
     def exchange_handler(self, conn: ssl.SSLSocket):

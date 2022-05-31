@@ -6,14 +6,19 @@ automatically. You also need to provide the certificate file and the private key
 
 """
 
+import logging
 import socket
 import ssl
+import sys
 import threading
+
+from pefl_protocol.helpers import make_logger
 
 
 class BaseService:
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
-                 time_out=60, max_connection=5):
+                 time_out=60, max_connection=5,
+                 logger: logging.Logger = None):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(listening)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -23,9 +28,14 @@ class BaseService:
         self.time_out = time_out
         self.max_connection = max_connection
 
+        if logger is None:
+            self.logger = make_logger('BaseService')
+        else:
+            self.logger = logger
+
     def run(self):
         self.sock.listen(self.max_connection)
-        print('Waiting for connection.')
+        self.logger.info('Service is running. Waiting for connection.')
         while True:
             conn, address = self.sock.accept()
             t = threading.Thread(target=self.tcp_handler, args=(conn, address))

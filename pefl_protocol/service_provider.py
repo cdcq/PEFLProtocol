@@ -13,13 +13,14 @@ cp.run()
 import time
 
 from copy import deepcopy
+import logging
 from phe import paillier
 from random import random, getrandbits
 
 from pefl_protocol.base_service import BaseService
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
-from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_enc_len
+from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_enc_len, make_logger
 from pefl_protocol.key_generator import KeyRequester
 
 
@@ -30,9 +31,16 @@ class ServiceProvider(BaseService, KeyRequester):
                  model_length: int, learning_rate: float,
                  trainers_count: int, train_round: int,
                  time_out=10, max_connection=5,
-                 precision=32):
+                 precision=32,
+                 logger: logging.Logger = None):
+
+        if logger is None:
+            self.logger = make_logger('ServiceProvider')
+        else:
+            self.logger = logger
+
         BaseService.__init__(self, listening, cert_path, key_path,
-                             time_out, max_connection)
+                             time_out, max_connection, logger=self.logger)
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.cloud_provider = cloud_provider
@@ -54,41 +62,34 @@ class ServiceProvider(BaseService, KeyRequester):
         self.temp = []
 
     def run(self):
-        # self.model = self.init_model()
         self.model = arr_enc(self.model, self.pkc, self.precision)
 
         for round_number in range(1, self.train_round + 1):
             self.round(round_number)
 
     def round(self, round_number):
+        self.logger.info('Round {0} is started, waiting for trainers ready.'.format(round_number))
 
-        print(time.asctime(time.localtime(time.time())))
-        print('Round {0} is started, waiting for trainers ready.'.format(round_number))
         self.round_ready()
+        self.logger.info('All trainers are ready.')
 
-        print(time.asctime(time.localtime(time.time())))
-        print('All trainers are ready.')
         self.cloud_init()
 
-        print(time.asctime(time.localtime(time.time())))
-        print('Start SEC_MED.')
+        self.logger.info('Start SecMed.')
         gm = self.medians_protocol()
-        print(time.asctime(time.localtime(time.time())))
-        print('Start SEC_PER.')
+
+        self.logger.info('Start SecPear.')
         for i in range(self.trainers_count):
             self.pearson_protocol(self.gradient[i], gm, i)
 
-        print(time.asctime(time.localtime(time.time())))
-        print('Start SEC_AGG.')
+        self.logger.info('Start SecAgg.')
         self.aggregate_protocol()
 
-        print(time.asctime(time.localtime(time.time())))
-        print('Start SEC_EXC.')
+        self.logger.info('Start SecExch.')
         self.exchange_protocol()
 
-        print('All protocols are finished. Start to distribute model.')
+        self.logger.info('Start to distribute model.')
         self.distribute_model()
-        print('A round finished.')
 
     def round_ready(self):
         """
@@ -204,7 +205,6 @@ class ServiceProvider(BaseService, KeyRequester):
         dc = [paillier.EncryptedNumber(self.pkc, i) for i in data]
         gm = [dc[i] - r[i] for i in range(n)]
 
-        print('SecMed OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
             MessageItems.DATA: 'OK'
@@ -251,7 +251,6 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
 
-        print('SecPear OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER,
             MessageItems.DATA: 'OK'
@@ -308,7 +307,6 @@ class ServiceProvider(BaseService, KeyRequester):
             for j in range(n):
                 self.model[j] = self.model[j] - fx[i][j]
 
-        print('SecAgg OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: 'OK'
@@ -348,7 +346,6 @@ class ServiceProvider(BaseService, KeyRequester):
         rc = arr_enc(r, self.pkx, self.precision)
         self.model_x = [gx[i] - rc[i] for i in range(n)]
 
-        print('SecExch OK.')
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
             MessageItems.DATA: 'OK'
@@ -385,3 +382,5 @@ class ServiceProvider(BaseService, KeyRequester):
             msg = receive_obj(conn)
             if msg[MessageItems.DATA] == 'OK':
                 conn.close()
+            else:
+                self.logger.warning('Require model ended incorrectly.')

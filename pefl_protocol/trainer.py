@@ -13,6 +13,7 @@ for i in range(round_count):
 
 """
 
+import logging
 from phe import paillier
 from hashlib import md5
 from random import getrandbits
@@ -20,7 +21,7 @@ from time import sleep
 
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
-from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec
+from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec, make_logger
 from pefl_protocol.key_generator import KeyRequester
 
 
@@ -29,7 +30,8 @@ class Trainer(KeyRequester):
                  token_path: str,
                  model_length: int,
                  precision: int = 32,
-                 wait_time: int = 5):
+                 wait_time: int = 5,
+                 logger: logging.Logger = None):
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.service_provider = service_provider
@@ -44,10 +46,14 @@ class Trainer(KeyRequester):
         self.round_id = -1
         self.gradient = []
 
+        if logger is None:
+            self.logger = make_logger('Trainer')
+        else:
+            self.logger = logger
+
     def round_run(self, gradient: [float]) -> [float]:
-        print('A new round is started. User name: {0}.'.format(self.user_name))
+        self.logger.info('A new round is started. User name: {0}.'.format(self.user_name))
         self.round_id = -1
-        # self.gradient = arr_enc(gradient, self.pkc, self.precision)
         self.gradient = gradient
 
         self.round_ready()
@@ -82,14 +88,14 @@ class Trainer(KeyRequester):
         msg = receive_obj(conn)
         if msg[MessageItems.DATA] == 'OK':
             conn.close()
-            print('The round is ready. Round ID: {0}.'.format(self.round_id))
+            self.logger.info('The round is ready. The round ID is {}.'.format(self.round_id))
         else:
-            print('A round ready ended incorrectly. User name: {0}.'.format(self.user_name))
+            self.logger.warning('Round {} ready ended incorrectly.'.format(self.round_id))
 
     def get_model(self) -> [float]:
         sleep(self.wait_time)
         while True:
-            conn = self.service_provider.start_connect()
+            conn = self.service_provider.start_connect(wait_time=10)
             msg = {
                 MessageItems.PROTOCOL: Protocols.GET_MODEL,
                 MessageItems.USER: self.user_name

@@ -1,5 +1,8 @@
 from phe import paillier
 from math import ceil
+from multiprocessing import Pool
+
+from pefl_protocol.configs import Configs
 
 
 def gen_ciphertext(enc_number: [paillier.EncryptedNumber]) -> [int]:
@@ -27,6 +30,9 @@ class Encryptor:
         else:
             return arr_len
 
+    def enc_number(self, number: int) -> paillier.EncryptedNumber:
+        return self.pub.encrypt(number)
+
     def arr_enc(self, plain: [float]) -> [paillier.EncryptedNumber]:
         if self.if_package is True:
             padding = self.precision
@@ -52,12 +58,17 @@ class Encryptor:
                 packages[-1] = packages[-1] + number * base
                 base = base * power
 
-            ret = [self.pub.encrypt(i) for i in packages]
+            # ret = [self.pub.encrypt(i) for i in packages]
+            with Pool(Configs.PROCESS_COUNT) as pool:
+                ret = pool.map(self.enc_number, packages)
         else:
             prc_power = 2 ** self.precision
             ret = [self.pub.encrypt(int(i * prc_power)) for i in plain]
 
         return ret
+
+    def dec_number(self, cipher: paillier.EncryptedNumber) -> int:
+        return self.prv.decrypt(cipher)
 
     def arr_dec(self, cipher: [paillier.EncryptedNumber], arr_len) -> [float]:
         if self.if_package is True:
@@ -70,7 +81,10 @@ class Encryptor:
             number_range = 2 ** number_length
             prc_power = 2 ** self.precision
 
-            plain = [self.prv.decrypt(i) for i in cipher]
+            # plain = [self.prv.decrypt(i) for i in cipher]
+            with Pool(Configs.PROCESS_COUNT) as pool:
+                plain = pool.map(self.dec_number, cipher)
+
             numbers = []
             for i in plain:
                 for j in range(numbers_per_package):

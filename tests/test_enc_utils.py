@@ -25,7 +25,7 @@ dec_r = encryptor.arr_dec(enc_r, n * m)
 
 print('arr_len:', len(enc_r))
 for i in range(n * m):
-    print(int(log(abs(r[i] - dec_r[i]), 10)), end=' ')
+    print(int(log(abs(r[i] - dec_r[i] + 1e-10), 10)), end=' ')
 
 print('')
 

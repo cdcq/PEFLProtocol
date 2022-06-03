@@ -10,28 +10,28 @@ cp = ServiceProvider(listening, cert_path, key_path, key_generator, cloud_provid
 cp.run()
 
 """
-import time
 
 from copy import deepcopy
 import logging
 from phe import paillier
-from random import random, getrandbits
-
+from random import random
 from pefl_protocol.base_service import BaseService
+from pefl_protocol.configs import Configs
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
-from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_enc_len, make_logger
+from pefl_protocol.helpers import send_obj, receive_obj, make_logger
+from pefl_protocol.enc_utils import Encryptor, gen_ciphertext
 from pefl_protocol.key_generator import KeyRequester
 
 
 class ServiceProvider(BaseService, KeyRequester):
     def __init__(self, listening: (str, int), cert_path: str, key_path: str,
                  key_generator: Connector, cloud_provider: Connector,
-                 token_path: str, model: [float],
+                 token_path: str, init_model: [float],
                  model_length: int, learning_rate: float,
                  trainers_count: int, train_round: int,
                  time_out=10, max_connection=5,
-                 precision=32,
+                 precision=32, value_range_bits=16,
                  logger: logging.Logger = None):
 
         if logger is None:
@@ -49,8 +49,10 @@ class ServiceProvider(BaseService, KeyRequester):
         self.train_round = train_round
         self.learning_rate = learning_rate
         self.precision = precision
+        self.value_bits = value_range_bits
 
-        self.model = model
+        self.init_model = init_model
+        self.model = []
         self.gradient = [[] for _ in range(self.trainers_count)]
         self.model_x = []
         self.is_ready = False
@@ -61,8 +63,13 @@ class ServiceProvider(BaseService, KeyRequester):
         # Used for debug.
         self.temp = []
 
+        self.enc_c = Encryptor(self.pkc, None, self.precision, self.value_bits,
+                               Configs.KEY_LENGTH, Configs.IF_PACKAGE)
+        self.enc_x = Encryptor(self.pkx, None, self.precision, self.value_bits,
+                               Configs.KEY_LENGTH, Configs.IF_PACKAGE)
+
     def run(self):
-        self.model = arr_enc(self.model, self.pkc, self.precision)
+        self.model = self.enc_c.arr_enc(self.init_model)
 
         for round_number in range(1, self.train_round + 1):
             self.round(round_number)
@@ -187,23 +194,29 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
 
-        m, n = self.trainers_count, arr_enc_len(self.model_length)
+        m, n = self.trainers_count, self.model_length
+        enc_n = self.enc_c.arr_enc_len(self.model_length)
         # TODO: is random suitable?
         r = [random() for _ in range(self.model_length)]
-        r = arr_enc(r, self.pkc, self.precision)
+        r = self.enc_c.arr_enc(r)
 
-        r1 = [[(self.gradient[i][j] + r[j]).ciphertext() for j in range(n)] for i in range(m)]
+        r1 = [[self.gradient[i][j] + r[j] for j in range(enc_n)] for i in range(m)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
-            MessageItems.DATA: r1
+            MessageItems.DATA: {
+                'r1': [gen_ciphertext(i) for i in r1],
+                'm': m,
+                'n': n,
+                'enc_n': enc_n
+            }
         }
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        dc = [paillier.EncryptedNumber(self.pkc, i) for i in data]
-        gm = [dc[i] - r[i] for i in range(n)]
+        dc = self.enc_c.gen_enc_number(data)
+        gm = [dc[i] - r[i] for i in range(enc_n)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
@@ -233,18 +246,18 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
 
-        n = arr_enc_len(self.model_length)
-        r0 = int(random() * (2 ** self.precision))
-        r1 = int(random() * (2 ** self.precision))
+        r0 = int(random() * 2 ** self.precision)
+        r1 = int(random() * 2 ** self.precision)
         rx = [r0 * i for i in gx]
         ry = [r1 * i for i in gy]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER,
             MessageItems.DATA: {
-                'rx': [i.ciphertext() for i in rx],
-                'ry': [i.ciphertext() for i in ry],
-                'x_id': x_id
+                'rx': gen_ciphertext(rx),
+                'ry': gen_ciphertext(ry),
+                'x_id': x_id,
+                'n': self.model_length
             }
         }
         send_obj(conn, msg)
@@ -273,38 +286,35 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
 
-        m, n = self.trainers_count, arr_enc_len(self.model_length)
+        m, n = self.trainers_count, self.model_length
+        enc_n = self.enc_c.arr_enc_len(self.model_length)
 
         r = [random() for _ in range(m)]
-        r = [int(i * (2 ** self.precision)) for i in r]
-        r1 = [self.pkc.encrypt(i) for i in r]
-        g1 = deepcopy(self.gradient)
-        for i in range(m):
-            for j in range(n):
-                g1[i][j] = g1[i][j] + r1[i]
+        r2 = [self.enc_c.arr_enc([i] * n) for i in r]
+
+        g1 = [[self.gradient[i][j] + r2[i][j] for j in range(enc_n)] for i in range(m)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: {
                 'nu': self.learning_rate,
-                'g': [[i.ciphertext() for i in j] for j in g1]
+                'g': [gen_ciphertext(i) for i in g1],
+                'n': self.model_length
             }
         }
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        ex = [[paillier.EncryptedNumber(self.pkc, data['ex'][i][j])
-               for j in range(n)] for i in range(m)]
-        # k = [paillier.EncryptedNumber(self.pkc, i) for i in data['k']]
-        # Attention, k in here is plain text!
+        ex = [self.enc_c.gen_enc_number(i) for i in data['ex']]
+        # "k" here is plain text!
         k = data['k']
-        # "r" in here is multiplied by 2^precision.
-        kr = [self.pkc.encrypt(int(k[i] * r[i])) for i in range(m)]
-        fx = [[ex[i][j] - kr[i] for j in range(n)] for i in range(m)]
+        r1 = [k[i] * r[i] for i in range(m)]
+        r2 = [self.enc_c.arr_enc([i] * n) for i in r1]
+        fx = [[ex[i][j] - r2[i][j] for j in range(enc_n)] for i in range(m)]
 
         for i in range(m):
-            for j in range(n):
+            for j in range(enc_n):
                 self.model[j] = self.model[j] - fx[i][j]
 
         msg = {
@@ -329,22 +339,26 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
 
-        n = arr_enc_len(self.model_length)
-        r = [random() for _ in range(self.model_length)]
-        rc = arr_enc(r, self.pkc, self.precision)
-        r1 = [self.model[i] + rc[i] for i in range(n)]
+        n = self.model_length
+        enc_n = self.enc_c.arr_enc_len(n)
+        r = [random() for _ in range(n)]
+        rc = self.enc_c.arr_enc(r)
+        r1 = [self.model[i] + rc[i] for i in range(enc_n)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
-            MessageItems.DATA: [i.ciphertext() for i in r1]
+            MessageItems.DATA: {
+                'g': gen_ciphertext(r1),
+                'n': n
+            }
         }
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        gx = [paillier.EncryptedNumber(self.pkx, i) for i in data]
-        rc = arr_enc(r, self.pkx, self.precision)
-        self.model_x = [gx[i] - rc[i] for i in range(n)]
+        gx = self.enc_x.gen_enc_number(data)
+        rc = self.enc_x.arr_enc(r)
+        self.model_x = [gx[i] - rc[i] for i in range(enc_n)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,

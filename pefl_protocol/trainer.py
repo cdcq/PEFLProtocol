@@ -19,9 +19,11 @@ from hashlib import md5
 from random import getrandbits
 from time import sleep
 
+from pefl_protocol.configs import Configs
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
-from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec, make_logger
+from pefl_protocol.helpers import send_obj, receive_obj, make_logger
+from pefl_protocol.enc_utils import Encryptor, gen_ciphertext
 from pefl_protocol.key_generator import KeyRequester
 
 
@@ -29,14 +31,15 @@ class Trainer(KeyRequester):
     def __init__(self, key_generator: Connector, service_provider: Connector,
                  token_path: str,
                  model_length: int,
-                 precision: int = 32,
-                 wait_time: int = 5,
+                 precision=32, value_range_bits=16,
+                 wait_time=5,
                  logger: logging.Logger = None):
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.service_provider = service_provider
         self.model_length = model_length
         self.precision = precision
+        self.value_bits = value_range_bits
         self.wait_time = wait_time
 
         self.pkc = self.request_key(Protocols.GET_PKC)
@@ -50,6 +53,11 @@ class Trainer(KeyRequester):
             self.logger = make_logger('Trainer')
         else:
             self.logger = logger
+
+        self.enc_c = Encryptor(self.pkc, None, self.precision, self.value_bits,
+                               Configs.KEY_LENGTH, Configs.IF_PACKAGE)
+        self.enc_x = Encryptor(self.skx.public_key, self.skx, self.precision, self.value_bits,
+                               Configs.KEY_LENGTH, Configs.IF_PACKAGE)
 
     def round_run(self, gradient: [float]) -> [float]:
         self.logger.info('A new round is started. User name: {0}.'.format(self.user_name))
@@ -77,11 +85,11 @@ class Trainer(KeyRequester):
 
         self.round_id = msg[MessageItems.DATA]
 
-        gc = arr_enc(self.gradient, self.pkc, self.precision)
+        gc = self.enc_c.arr_enc(self.gradient)
         msg = {
             MessageItems.PROTOCOL: Protocols.ROUND_READY,
             MessageItems.ID: self.round_id,
-            MessageItems.DATA: [i.ciphertext() for i in gc]
+            MessageItems.DATA: gen_ciphertext(gc)
         }
         send_obj(conn, msg)
 
@@ -107,8 +115,8 @@ class Trainer(KeyRequester):
             if data != 'Error':
                 break
 
-        model = [paillier.EncryptedNumber(self.skx.public_key, data[i]) for i in range(len(data))]
-        ret = arr_dec(model, self.skx, self.precision)
+        model = self.enc_x.gen_enc_number(data)
+        ret = self.enc_x.arr_dec(model, self.model_length)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.GET_MODEL,

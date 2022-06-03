@@ -1,8 +1,6 @@
 import threading
 from random import random
 
-from pefl_protocol.helpers import arr_enc, arr_dec
-
 from test_basic import Configs, make_kgc_connector, make_cp_connector, make_sp_connector, \
     make_sp, make_cp, make_trainer
 
@@ -22,15 +20,15 @@ t.start()
 n = Configs.MODEL_LENGTH
 m = Configs.TRAINERS_COUNT
 
-model = [random() for _ in range(n)]
+model = [-random() for _ in range(n)]
 print('Encrypting the model.')
-sp.model = arr_enc(model, sp.pkc)
+sp.model = sp.enc_c.arr_enc(model)
 
 print('Start exchange protocol.')
 sp.exchange_protocol()
 
 print('Decrypting the model.')
-model2 = arr_dec(sp.model_x, trainer.skx)
+model2 = trainer.enc_x.arr_dec(sp.model_x, n)
 
 for i in range(n):
     print(model[i], model2[i], abs(model[i] - model2[i]))

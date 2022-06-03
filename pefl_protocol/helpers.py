@@ -24,7 +24,6 @@ import logging
 import ssl
 import struct
 import sys
-from phe import paillier
 
 import torch
 from functools import reduce
@@ -55,21 +54,6 @@ def receive_obj(conn: ssl.SSLSocket):
 
 
 # TODO: add the precision parameter in the use of function.
-def arr_enc(plain: [float], public_key: paillier.PaillierPublicKey, package=True, precision=32) \
-        -> [paillier.EncryptedNumber]:
-    # Ciphertext package.
-    ret = [public_key.encrypt(int(i * (2 ** precision))) for i in plain]
-    return ret
-
-
-def arr_enc_len(arr_len: int) -> int:
-    return arr_len
-
-
-def arr_dec(cipher: [paillier.EncryptedNumber], private_key: paillier.PaillierPrivateKey,
-            precision=32) -> [float]:
-    ret = [private_key.decrypt(i) / (2 ** precision) for i in cipher]
-    return ret
 
 
 def make_logger(name: str) -> logging.Logger:

@@ -1,13 +1,10 @@
 import threading
 from random import random
 
-from pefl_protocol.helpers import arr_enc, arr_dec
 from test_basic import Configs, make_kgc_connector, make_cp_connector, make_sp, make_cp
 
-from test_basic import *
-
-# Configs.TRAINERS_COUNT = 10
-Configs.TRAINERS_COUNT = 9
+Configs.TRAINERS_COUNT = 10
+# Configs.TRAINERS_COUNT = 9
 Configs.MODEL_LENGTH = 100
 
 kgc_connector = make_kgc_connector()
@@ -28,16 +25,16 @@ for i in g:
     print(i)
 
 print('Encrypting g.')
-sp.gradient = [arr_enc(g[i], sp.pkc) for i in range(m)]
+sp.gradient = [sp.enc_c.arr_enc(i) for i in g]
 
 r = [random() for _ in range(sp.model_length)]
-r = arr_enc(r, sp.pkc)
+r = sp.enc_c.arr_enc(r)
 
 print('Running protocol.')
 mg = sp.medians_protocol()
 
 print('Decrypting the medians.')
-mg = arr_dec(mg, cp.skc)
+mg = cp.enc_c.arr_dec(mg, n)
 
 print('Checking the medians.')
 tg = [[g[j][i] for j in range(m)] for i in range(n)]

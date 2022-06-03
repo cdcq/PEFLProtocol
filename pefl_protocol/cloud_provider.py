@@ -18,12 +18,13 @@ import logging
 import math
 import numpy
 import ssl
-from phe import paillier
 
 from pefl_protocol.base_service import BaseService
+from pefl_protocol.configs import Configs
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
-from pefl_protocol.helpers import send_obj, receive_obj, arr_enc, arr_dec, make_logger
+from pefl_protocol.helpers import send_obj, receive_obj, make_logger
+from pefl_protocol.enc_utils import Encryptor, gen_ciphertext
 from pefl_protocol.key_generator import KeyRequester
 
 
@@ -32,7 +33,7 @@ class CloudProvider(BaseService, KeyRequester):
                  key_generator: Connector,
                  token_path: str,
                  time_out=10, max_connection=5,
-                 precision=32,
+                 precision=32, value_range_bits=16,
                  logger: logging.Logger = None):
         if logger is None:
             self.logger = make_logger('CloudProvider')
@@ -44,11 +45,17 @@ class CloudProvider(BaseService, KeyRequester):
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.precision = precision
+        self.value_bits = value_range_bits
 
         self.skc = self.request_key(Protocols.GET_SKC)
         self.pkx = self.request_key(Protocols.GET_PKX)
         self.trainers_count = 0
         self.mu = []
+
+        self.enc_c = Encryptor(self.skc.public_key, self.skc, self.precision, self.value_bits,
+                               Configs.KEY_LENGTH, Configs.IF_PACKAGE)
+        self.enc_x = Encryptor(self.pkx, None, self.precision, self.value_bits,
+                               Configs.KEY_LENGTH, Configs.IF_PACKAGE)
 
     def tcp_handler(self, conn: ssl.SSLSocket, address):
         """
@@ -126,15 +133,13 @@ class CloudProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
-        r1 = msg[MessageItems.DATA]
-        # TODO: Get m and n by the length of the array is not a good idea.
-        m, n = len(r1), len(r1[0])
+        data = msg[MessageItems.DATA]
+        r1 = data['r1']
+        m, n, enc_n = data['m'], data['n'], data['enc_n']
 
-        dc = [[paillier.EncryptedNumber(self.skc.public_key, r1[i][j])
-               for j in range(n)] for i in range(m)]
-        dx = [arr_dec(dc[i], self.skc, self.precision) for i in range(m)]
+        dc = [self.enc_c.gen_enc_number(i) for i in r1]
+        dx = [self.enc_c.arr_dec(i, n) for i in dc]
 
-        n = len(dx[0])  # Attention.
         # Transpose the dx matrix. It is convenient for sorting the column vectors in
         # matrix dx and then calculate the medians in a column vector.
         dt = [[dx[j][i] for j in range(m)] for i in range(n)]
@@ -147,11 +152,10 @@ class CloudProvider(BaseService, KeyRequester):
         else:
             dm = [(dt[i][m // 2 - 1] + dt[i][m // 2]) / 2 for i in range(n)]
 
-        dc = arr_enc(dm, self.skc.public_key, self.precision)
-        n = len(dc)
+        dc = self.enc_c.arr_enc(dm)
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
-            MessageItems.DATA: [dc[i].ciphertext() for i in range(n)]
+            MessageItems.DATA: gen_ciphertext(dc)
         }
         send_obj(conn, msg)
 
@@ -174,13 +178,12 @@ class CloudProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        rx, ry, x_id = data['rx'], data['ry'], data['x_id']
-        rx = [paillier.EncryptedNumber(self.skc.public_key, rx[i]) for i in range(len(rx))]
-        ry = [paillier.EncryptedNumber(self.skc.public_key, ry[i]) for i in range(len(ry))]
+        rx, ry, x_id, n = data['rx'], data['ry'], data['x_id'], data['n']
+        rx = self.enc_c.gen_enc_number(rx)
+        ry = self.enc_c.gen_enc_number(ry)
 
-        dx = arr_dec(rx, self.skc, self.precision)
-        dy = arr_dec(ry, self.skc, self.precision)
-        n = len(dx)
+        dx = self.enc_c.arr_dec(rx, n)
+        dy = self.enc_c.arr_dec(ry, n)
 
         rho = float(numpy.corrcoef(dx, dy)[0][1])
 
@@ -213,30 +216,26 @@ class CloudProvider(BaseService, KeyRequester):
         send_obj(conn, msg)
 
         msg = receive_obj(conn)
-        nu = msg[MessageItems.DATA]['nu']
-        g = msg[MessageItems.DATA]['g']
+        data = msg[MessageItems.DATA]
+        nu, g, n = data['nu'], data['g'], data['n']
 
-        g = [[paillier.EncryptedNumber(self.skc.public_key, i) for i in j] for j in g]
-        gm = [arr_dec(i, self.skc, self.precision) for i in g]
+        g = [self.enc_c.gen_enc_number(i) for i in g]
+        gm = [self.enc_c.arr_dec(i, n) for i in g]
         m = self.trainers_count
-        n = len(gm[0])
 
         sum_mu = sum(self.mu)
-        # "k" is the aggregate formula mentioned in PEFL paper.
 
+        # "k" is the aggregate formula mentioned in PEFL paper.
         small_number = 1e-10
         k = [nu * self.mu[i] / (m * sum_mu + small_number) for i in range(m)]
         ex = [[k[i] * gm[i][j] for j in range(n)] for i in range(m)]
 
-        # TODO: Here is an ugly fix for a bug, need to change!
-        # kc = arr_enc(k, self.skc.public_key, self.precision)
-        exc = [arr_enc(ex[i], self.skc.public_key, self.precision) for i in range(m)]
+        ec = [self.enc_c.arr_enc(i) for i in ex]
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: {
-                'ex': [[i.ciphertext() for i in j] for j in exc],
-                # 'k': [i.ciphertext() for i in kc]
-                # Attention, k in here is plain text!
+                'ex': [gen_ciphertext(i) for i in ec],
+                # "k" here is plain text!
                 'k': k
             }
         }
@@ -261,13 +260,14 @@ class CloudProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        omega = [paillier.EncryptedNumber(self.skc.public_key, i)
-                 for i in data]
+        g, n = data['g'], data['n']
+        g = self.enc_c.gen_enc_number(g)
 
-        omega_x = arr_enc(arr_dec(omega, self.skc, self.precision), self.pkx, self.precision)
+        gm = self.enc_c.arr_dec(g, n)
+        gx = self.enc_x.arr_enc(gm)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
-            MessageItems.DATA: [i.ciphertext() for i in omega_x]
+            MessageItems.DATA: gen_ciphertext(gx)
         }
         send_obj(conn, msg)

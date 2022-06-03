@@ -66,7 +66,7 @@ def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvide
         key_generator=kgc_connector,
         cloud_provider=cp_connector,
         token_path=os.path.join(Configs.DIR_OF_AUTH, "token", "sp.yml"),
-        model=init_weights_vector,
+        init_model=init_weights_vector,
         learning_rate=0.01,
         trainers_count=Configs.TRAINERS_COUNT,
         train_round=Configs.MAX_ROUND,

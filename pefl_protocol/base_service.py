@@ -9,7 +9,6 @@ automatically. You also need to provide the certificate file and the private key
 import logging
 import socket
 import ssl
-import sys
 import threading
 
 from pefl_protocol.helpers import make_logger

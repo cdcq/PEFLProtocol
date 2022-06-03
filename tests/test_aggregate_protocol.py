@@ -3,7 +3,6 @@ import numpy
 import threading
 from random import random
 
-from pefl_protocol.helpers import arr_enc, arr_dec
 from test_basic import Configs, make_kgc_connector, make_cp_connector, make_sp, make_cp
 
 Configs.TRAINERS_COUNT = 5
@@ -29,10 +28,10 @@ for i in range(m):
         g[i][j] = g[i][j] + 0.1 * random() - 0.05
 
 print('Encrypting g.')
-sp.gradient = [arr_enc(g[i], sp.pkc) for i in range(m)]
+sp.gradient = [sp.enc_c.arr_enc(i) for i in g]
 
 model = [random() for _ in range(n)]
-sp.model = arr_enc(model, sp.pkc)
+sp.model = sp.enc_c.arr_enc(model)
 
 print('Cloud init.')
 sp.cloud_init()
@@ -46,7 +45,7 @@ for i in range(sp.trainers_count):
 print('Running aggregate protocol')
 sp.aggregate_protocol()
 
-model2 = arr_dec(sp.model, cp.skc)
+model2 = cp.enc_c.arr_dec(sp.model, n)
 
 sum_mu = sum(cp.mu)
 nu = sp.learning_rate

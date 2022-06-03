@@ -3,7 +3,7 @@ import threading
 from random import random
 from time import sleep
 
-from pefl_protocol.helpers import arr_enc
+from pefl_protocol.enc_utils import arr_enc
 from pefl_protocol.trainer import Trainer
 from test_basic import Configs, make_kgc_connector, make_cp_connector, make_sp_connector, make_sp, make_cp
 

@@ -1,4 +1,3 @@
-import copy
 import torch
 from ML_utils.poison import get_poison_batch
 from ML_utils.color_print import *
@@ -56,6 +55,8 @@ def test_model(model, test_dataloader, loss_fn, device, epoch, is_poison: bool, 
     else:
         print_poison_test('poisoned: {},  round: {} Average loss: {:.4f}, Accuracy: {}/{} ({:.2%})'
               .format(is_poison, epoch, total_loss, correct, len(test_dataloader.dataset), total_acc))
+
+    return total_loss, total_acc
 
 
 # def test_model(test_set, model, loss_fn, device):

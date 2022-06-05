@@ -2,8 +2,8 @@ import os
 import sys
 import torch
 sys.path.append(os.path.join(sys.path[0], ".."))
-from torch.utils.tensorboard import SummaryWriter
 
+from torch.utils.tensorboard import SummaryWriter
 from pefl_protocol.helpers import flatten, yield_accumulated_grads, de_flatten
 from ML_utils.get_data import DatasetSource
 from ML_utils.model import get_model
@@ -16,6 +16,7 @@ from configs import Configs
 if __name__ == "__main__":
 
     model = get_model(model_name=Configs.MODEL_NAME, device=Configs.DEVICE)
+    print(model)
     weights_vector = flatten(model.parameters())
     data_source = DatasetSource(dataset_name=Configs.DATASET_NAME)
 
@@ -24,20 +25,21 @@ if __name__ == "__main__":
     loss_fn = torch.nn.CrossEntropyLoss()
 
     writer = SummaryWriter(f'runs/task_{Configs.TASK}', flush_secs=60)
+    writer.add_graph(model=model, input_to_model=next(iter(test_dataloader))[0].to(Configs.DEVICE))
 
     edge_dataloaders = []
     for edge_id in range(Configs.TRAINERS_COUNT):
         edge_dataloader = data_source.get_train_dataloader(frac=0.3, iid=True)
         edge_dataloaders.append(edge_dataloader)
 
-
-    for round_id in range(Configs.MAX_ROUND):
+    for round_id in range(1, Configs.MAX_ROUND + 1):
         grads_vector_sum = [.0] * Configs.MODEL_LENGTH
 
         for edge_id in range(Configs.TRAINERS_COUNT):
             de_flatten(vector=weights_vector, model=model)
             if exec_poisoning(round_id=round_id, edge_id=edge_id,
                               trainer_count=Configs.TRAINERS_COUNT, poison_freq=1, start_round=2):
+            # if 1 == 0:
                 grads_list, local_loss = poison_local_update(model=model, dataloader=edge_dataloaders[edge_id],
                                                              trainer_count=Configs.TRAINERS_COUNT,
                                                              edge_id=edge_id,
@@ -56,12 +58,18 @@ if __name__ == "__main__":
      
         de_flatten(vector=weights_vector, model=model)
 
-        test_model(model=model, test_dataloader=test_dataloader, loss_fn=loss_fn, device=Configs.DEVICE,
-                   epoch=round_id, is_poison=False, task=Configs.TASK)
-        test_model(model=model, test_dataloader=test_poison_dataloader, loss_fn=loss_fn, device=Configs.DEVICE,
-                   epoch=round_id, is_poison=True, task=Configs.TASK)
+        loss_normal, acc_normal = test_model(model=model, test_dataloader=test_dataloader, loss_fn=loss_fn,
+                                             device=Configs.DEVICE, epoch=round_id, is_poison=False, task=Configs.TASK)
+        loss_poison, acc_poison = test_model(model=model, test_dataloader=test_poison_dataloader, loss_fn=loss_fn,
+                                             device=Configs.DEVICE, epoch=round_id, is_poison=True, task=Configs.TASK)
         print("")
+        writer.add_scalars("Normal vs. Poison loss",
+                           {"Normal": loss_normal, "Poison": loss_poison},
+                           round_id)
+        writer.add_scalars("Normal vs. Poison accuracy",
+                           {"Normal": acc_normal, "Poison": acc_poison},
+                           round_id)
 
-        if (round_id+1) % 5 == 0:
-            model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id + 1}.pt")
+        if round_id % 5 == 0:
+            model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id}.pt")
             torch.save(model.state_dict(), model_save_path)

@@ -1,9 +1,10 @@
 import sys
-import time
 import os
+import time
 import json
 import torch
 
+from torch.utils.tensorboard import SummaryWriter
 from test_basic import make_sp_connector, make_kgc_connector, make_trainer
 from configs import Configs
 
@@ -32,7 +33,11 @@ if __name__ == "__main__":
     test_poison_dataloader = data_source.get_test_poison_loader()
     loss_fn = torch.nn.CrossEntropyLoss()
 
-    for round_id in range(Configs.MAX_ROUND):
+    if edge_id == Configs.SHOW_EDGE_ID:
+        writer = SummaryWriter(log_dir=f"runs/task_{Configs.TASK}", flush_secs=60)
+        writer.add_graph(model=model, input_to_model=next(iter(test_dataloader))[0].to(Configs.DEVICE))
+
+    for round_id in range(1, Configs.MAX_ROUND + 1):
         if exec_poisoning(round_id=round_id, edge_id=edge_id, trainer_count=Configs.TRAINERS_COUNT,
                           poison_freq=1, start_round=2):
             grads_list, local_loss = poison_local_update(model=model, dataloader=train_dataloader,
@@ -48,12 +53,20 @@ if __name__ == "__main__":
         de_flatten(vector=weights_vector, model=model)
         print(time.asctime(time.localtime(time.time())))
 
-        test_model(model=model, test_dataloader=test_dataloader, loss_fn=loss_fn, device=Configs.DEVICE,
-                   epoch=round_id, is_poison=False, task=Configs.TASK)
-        test_model(model=model, test_dataloader=test_poison_dataloader, loss_fn=loss_fn, device=Configs.DEVICE,
-                   epoch=round_id, is_poison=True, task=Configs.TASK)
+        loss_normal, acc_normal = test_model(model=model, test_dataloader=test_dataloader, loss_fn=loss_fn,
+                                             device=Configs.DEVICE, epoch=round_id, is_poison=False, task=Configs.TASK)
+        loss_poison, acc_poison = test_model(model=model, test_dataloader=test_poison_dataloader, loss_fn=loss_fn,
+                                             device=Configs.DEVICE, epoch=round_id, is_poison=True, task=Configs.TASK)
         print("")
 
-        # if (round_id+1) % 5 == 0:
-        #     model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id + 1}.pt")
-        #     torch.save(model.state_dict(), model_save_path)
+        if edge_id == Configs.SHOW_EDGE_ID:
+            writer.add_scalars("Normal vs. Poison loss",
+                               {"Normal": loss_normal, "Poison": loss_poison},
+                               round_id)
+            writer.add_scalars("Normal vs. Poison accuracy",
+                               {"Normal": acc_normal, "Poison": acc_poison},
+                               round_id)
+
+            if round_id % 5 == 0:
+                model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id}.pt")
+                torch.save(model.state_dict(), model_save_path)

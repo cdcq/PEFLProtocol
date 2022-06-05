@@ -18,13 +18,14 @@ import logging
 import math
 import numpy
 import ssl
+from time import time
 
 from pefl_protocol.base_service import BaseService
 from pefl_protocol.configs import Configs
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
 from pefl_protocol.helpers import send_obj, receive_obj, make_logger
-from pefl_protocol.enc_utils import Encryptor, gen_ciphertext
+from pefl_protocol.enc_utils import Encryptor, gen_cipher_arr
 from pefl_protocol.key_generator import KeyRequester
 
 
@@ -137,7 +138,7 @@ class CloudProvider(BaseService, KeyRequester):
         r1 = data['r1']
         m, n, enc_n = data['m'], data['n'], data['enc_n']
 
-        dc = [self.enc_c.gen_enc_number(i) for i in r1]
+        dc = [self.enc_c.gen_encrypted_arr(i) for i in r1]
         dx = [self.enc_c.arr_dec(i, n) for i in dc]
 
         # Transpose the dx matrix. It is convenient for sorting the column vectors in
@@ -155,7 +156,7 @@ class CloudProvider(BaseService, KeyRequester):
         dc = self.enc_c.arr_enc(dm)
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
-            MessageItems.DATA: gen_ciphertext(dc)
+            MessageItems.DATA: gen_cipher_arr(dc)
         }
         send_obj(conn, msg)
 
@@ -179,8 +180,8 @@ class CloudProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
         rx, ry, x_id, n = data['rx'], data['ry'], data['x_id'], data['n']
-        rx = self.enc_c.gen_enc_number(rx)
-        ry = self.enc_c.gen_enc_number(ry)
+        rx = self.enc_c.gen_encrypted_arr(rx)
+        ry = self.enc_c.gen_encrypted_arr(ry)
 
         dx = self.enc_c.arr_dec(rx, n)
         dy = self.enc_c.arr_dec(ry, n)
@@ -219,7 +220,7 @@ class CloudProvider(BaseService, KeyRequester):
         data = msg[MessageItems.DATA]
         nu, g, n = data['nu'], data['g'], data['n']
 
-        g = [self.enc_c.gen_enc_number(i) for i in g]
+        g = [self.enc_c.gen_encrypted_arr(i) for i in g]
         gm = [self.enc_c.arr_dec(i, n) for i in g]
         m = self.trainers_count
 
@@ -234,7 +235,7 @@ class CloudProvider(BaseService, KeyRequester):
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: {
-                'ex': [gen_ciphertext(i) for i in ec],
+                'ex': [gen_cipher_arr(i) for i in ec],
                 # "k" here is plain text!
                 'k': k
             }
@@ -261,13 +262,13 @@ class CloudProvider(BaseService, KeyRequester):
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
         g, n = data['g'], data['n']
-        g = self.enc_c.gen_enc_number(g)
+        g = self.enc_c.gen_encrypted_arr(g)
 
         gm = self.enc_c.arr_dec(g, n)
         gx = self.enc_x.arr_enc(gm)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
-            MessageItems.DATA: gen_ciphertext(gx)
+            MessageItems.DATA: gen_cipher_arr(gx)
         }
         send_obj(conn, msg)

@@ -23,7 +23,7 @@ from pefl_protocol.configs import Configs
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
 from pefl_protocol.helpers import send_obj, receive_obj, make_logger
-from pefl_protocol.enc_utils import Encryptor, gen_ciphertext
+from pefl_protocol.enc_utils import Encryptor, gen_cipher_arr
 from pefl_protocol.key_generator import KeyRequester
 
 
@@ -89,7 +89,7 @@ class Trainer(KeyRequester):
         msg = {
             MessageItems.PROTOCOL: Protocols.ROUND_READY,
             MessageItems.ID: self.round_id,
-            MessageItems.DATA: gen_ciphertext(gc)
+            MessageItems.DATA: gen_cipher_arr(gc)
         }
         send_obj(conn, msg)
 
@@ -115,7 +115,7 @@ class Trainer(KeyRequester):
             if data != 'Error':
                 break
 
-        model = self.enc_x.gen_enc_number(data)
+        model = self.enc_x.gen_encrypted_arr(data)
         ret = self.enc_x.arr_dec(model, self.model_length)
 
         msg = {

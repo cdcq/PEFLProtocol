@@ -1,12 +1,10 @@
+from base64 import b85encode, b85decode
 from phe import paillier
-from math import ceil
+from math import ceil, log
 from multiprocessing import Pool
+from time import time
 
 from pefl_protocol.configs import Configs
-
-
-def gen_ciphertext(enc_number: [paillier.EncryptedNumber]) -> [int]:
-    return [i.ciphertext() for i in enc_number]
 
 
 class Encryptor:
@@ -107,5 +105,23 @@ class Encryptor:
 
         return ret
 
-    def gen_enc_number(self, ciphertext: [int]) -> [paillier.EncryptedNumber]:
-        return [paillier.EncryptedNumber(self.pub, i) for i in ciphertext]
+    def gen_encrypted_number(self, cipher):
+        cipher = int.from_bytes(b85decode(cipher.encode()), 'big')
+        return paillier.EncryptedNumber(self.pub, cipher)
+
+    def gen_encrypted_arr(self, ciphertext: [str]) -> [paillier.EncryptedNumber]:
+        # return [paillier.EncryptedNumber(self.pub, i) for i in ciphertext]
+        with Pool(Configs.PROCESS_COUNT) as pool:
+            return pool.map(self.gen_encrypted_number, ciphertext)
+
+
+def gen_cipher_number(number):
+    number = number.ciphertext()
+    number = b85encode(number.to_bytes(ceil(log(number, 256)), 'big')).decode()
+    return number
+
+
+def gen_cipher_arr(enc_number: [paillier.EncryptedNumber]) -> [str]:
+    # return [i.ciphertext() for i in enc_number]
+    with Pool(Configs.PROCESS_COUNT) as pool:
+        return pool.map(gen_cipher_number, enc_number)

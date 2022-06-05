@@ -26,7 +26,7 @@ class Configs:
     KGC_ADDR_PORT = ('127.0.0.1', 8710)
     CP_ADDR_PORT = ('127.0.0.1', 8711)
     SP_ADDR_PORT = ('127.0.0.1', 8712)
-    # CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999)) # 会导致分布式测试失败，cp和edge读出来的ip_port不同
+    # CP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))  # 会导致分布式测试失败，cp和edge读出来的ip_port不同
     # SP_ADDR_PORT = ('127.0.0.1', randint(1000, 9999))
     TIME_OUT = 3600 * 4
 

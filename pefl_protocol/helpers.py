@@ -24,9 +24,9 @@ import logging
 import ssl
 import struct
 import sys
-
 import torch
 from functools import reduce
+from time import time
 
 
 def send_msg(conn: ssl.SSLSocket, msg: bytes):
@@ -51,9 +51,6 @@ def receive_msg(conn: ssl.SSLSocket) -> bytes | None:
 
 def receive_obj(conn: ssl.SSLSocket):
     return json.loads(receive_msg(conn))
-
-
-# TODO: add the precision parameter in the use of function.
 
 
 def make_logger(name: str) -> logging.Logger:

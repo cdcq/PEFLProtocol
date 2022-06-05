@@ -3,7 +3,7 @@ import numpy
 import threading
 from phe import paillier
 from random import random
-from time import sleep
+from time import sleep, time
 
 from test_basic import Configs, make_kgc_connector, make_sp_connector, make_cp_connector, \
     make_sp, make_cp, make_trainer
@@ -33,14 +33,20 @@ t1.start()
 t2 = threading.Thread(target=sp.run)
 t2.start()
 
+start_time = time()
+
 gradient = [0.06068916991353035, 0.060690008103847504, 0.060690008103847504, 0.06068935617804527, 0.060690008103847504,
             0.06068935617804527, 0.060690008103847504, 0.06068900600075722, 0.06068916991353035, 0.060690008103847504] \
            * test_mgn
 model2 = tr.round_run(gradient)
 
+end_time = time()
+
 sleep(1)
 
 # print(cp.enc_c.arr_dec(sp.temp, Configs.MODEL_LENGTH))
+
+print(end_time - start_time)
 
 exit(0)
 

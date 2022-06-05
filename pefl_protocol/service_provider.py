@@ -11,17 +11,19 @@ cp.run()
 
 """
 
-from copy import deepcopy
 import logging
 from phe import paillier
 from random import random
+from time import time
+
 from pefl_protocol.base_service import BaseService
 from pefl_protocol.configs import Configs
 from pefl_protocol.connector import Connector
 from pefl_protocol.consts import Protocols, MessageItems
 from pefl_protocol.helpers import send_obj, receive_obj, make_logger
-from pefl_protocol.enc_utils import Encryptor, gen_ciphertext
+from pefl_protocol.enc_utils import Encryptor, gen_cipher_arr
 from pefl_protocol.key_generator import KeyRequester
+from pefl_protocol.multiprocess_utils import arr_add, arr_sub, arr_mul
 
 
 class ServiceProvider(BaseService, KeyRequester):
@@ -133,7 +135,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
             msg = receive_obj(conn)
             data = msg[MessageItems.DATA]
-            g = [paillier.EncryptedNumber(self.pkc, i) for i in data]
+            g = self.enc_c.gen_encrypted_arr(data)
 
             self.gradient[msg[MessageItems.ID]] = g
 
@@ -200,12 +202,13 @@ class ServiceProvider(BaseService, KeyRequester):
         r = [random() for _ in range(self.model_length)]
         r = self.enc_c.arr_enc(r)
 
-        r1 = [[self.gradient[i][j] + r[j] for j in range(enc_n)] for i in range(m)]
+        # r1 = [[self.gradient[i][j] + r[j] for j in range(enc_n)] for i in range(m)]
+        r1 = [arr_add(i, r) for i in self.gradient]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
             MessageItems.DATA: {
-                'r1': [gen_ciphertext(i) for i in r1],
+                'r1': [gen_cipher_arr(i) for i in r1],
                 'm': m,
                 'n': n,
                 'enc_n': enc_n
@@ -215,8 +218,9 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        dc = self.enc_c.gen_enc_number(data)
-        gm = [dc[i] - r[i] for i in range(enc_n)]
+        dc = self.enc_c.gen_encrypted_arr(data)
+        # gm = [dc[i] - r[i] for i in range(enc_n)]
+        gm = arr_sub(dc, r)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_MED,
@@ -248,14 +252,16 @@ class ServiceProvider(BaseService, KeyRequester):
 
         r0 = int(random() * 2 ** self.precision)
         r1 = int(random() * 2 ** self.precision)
-        rx = [r0 * i for i in gx]
-        ry = [r1 * i for i in gy]
+        # rx = [r0 * i for i in gx]
+        # ry = [r1 * i for i in gy]
+        rx = arr_mul(gx, [r0] * len(gx))
+        ry = arr_mul(gy, [r1] * len(gy))
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_PER,
             MessageItems.DATA: {
-                'rx': gen_ciphertext(rx),
-                'ry': gen_ciphertext(ry),
+                'rx': gen_cipher_arr(rx),
+                'ry': gen_cipher_arr(ry),
                 'x_id': x_id,
                 'n': self.model_length
             }
@@ -292,13 +298,14 @@ class ServiceProvider(BaseService, KeyRequester):
         r = [random() for _ in range(m)]
         r2 = [self.enc_c.arr_enc([i] * n) for i in r]
 
-        g1 = [[self.gradient[i][j] + r2[i][j] for j in range(enc_n)] for i in range(m)]
+        # g1 = [[self.gradient[i][j] + r2[i][j] for j in range(enc_n)] for i in range(m)]
+        g1 = [arr_add(self.gradient[i], r2[i]) for i in range(m)]
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: {
                 'nu': self.learning_rate,
-                'g': [gen_ciphertext(i) for i in g1],
+                'g': [gen_cipher_arr(i) for i in g1],
                 'n': self.model_length
             }
         }
@@ -306,16 +313,18 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        ex = [self.enc_c.gen_enc_number(i) for i in data['ex']]
+        ex = [self.enc_c.gen_encrypted_arr(i) for i in data['ex']]
         # "k" here is plain text!
         k = data['k']
         r1 = [k[i] * r[i] for i in range(m)]
         r2 = [self.enc_c.arr_enc([i] * n) for i in r1]
-        fx = [[ex[i][j] - r2[i][j] for j in range(enc_n)] for i in range(m)]
+        # fx = [[ex[i][j] - r2[i][j] for j in range(enc_n)] for i in range(m)]
+        fx = [arr_sub(ex[i], r2[i]) for i in range(m)]
 
         for i in range(m):
-            for j in range(enc_n):
-                self.model[j] = self.model[j] - fx[i][j]
+            # for j in range(enc_n):
+            #     self.model[j] = self.model[j] - fx[i][j]
+            self.model = arr_sub(self.model, fx[i])
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
@@ -343,12 +352,13 @@ class ServiceProvider(BaseService, KeyRequester):
         enc_n = self.enc_c.arr_enc_len(n)
         r = [random() for _ in range(n)]
         rc = self.enc_c.arr_enc(r)
-        r1 = [self.model[i] + rc[i] for i in range(enc_n)]
+        # r1 = [self.model[i] + rc[i] for i in range(enc_n)]
+        r1 = arr_add(self.model, rc)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
             MessageItems.DATA: {
-                'g': gen_ciphertext(r1),
+                'g': gen_cipher_arr(r1),
                 'n': n
             }
         }
@@ -356,9 +366,10 @@ class ServiceProvider(BaseService, KeyRequester):
 
         msg = receive_obj(conn)
         data = msg[MessageItems.DATA]
-        gx = self.enc_x.gen_enc_number(data)
+        gx = self.enc_x.gen_encrypted_arr(data)
         rc = self.enc_x.arr_enc(r)
-        self.model_x = [gx[i] - rc[i] for i in range(enc_n)]
+        # self.model_x = [gx[i] - rc[i] for i in range(enc_n)]
+        self.model_x = arr_sub(gx, rc)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_EXC,
@@ -389,7 +400,7 @@ class ServiceProvider(BaseService, KeyRequester):
 
             msg = {
                 MessageItems.PROTOCOL: Protocols.GET_MODEL,
-                MessageItems.DATA: [i.ciphertext() for i in self.model_x]
+                MessageItems.DATA: gen_cipher_arr(self.model_x)
             }
             send_obj(conn, msg)
 

@@ -339,7 +339,10 @@ class ServiceProvider(BaseService, KeyRequester):
             self.model = arr_sub(self.model, fx[i])
 
         mu = data['mu']
-        self.mu_table.append(mu)
+        mu_sorted = [0] * self.trainers_count
+        for i in range(self.trainers_count):
+            mu_sorted[self.user_list.index(self.round_user[i])] = mu[i]
+        self.mu_table.append(mu_sorted)
 
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,

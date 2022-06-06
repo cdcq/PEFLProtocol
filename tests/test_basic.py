@@ -73,7 +73,7 @@ def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvide
         model_length=Configs.MODEL_LENGTH,
         time_out=Configs.TIME_OUT,
         precision=Configs.PRECISION,
-        mu_export_path='./temp_data/mu_table.csv'
+        mu_export_path=os.path.join("saved", "mus", f"task_{Configs.TASK}", "mu_table.csv")
     )
     return sp
 
@@ -91,11 +91,11 @@ def make_cp(kgc_connector: Connector) -> CloudProvider:
     return cp
 
 
-def make_trainer(kgc_connector: Connector, sp_connector: Connector):
+def make_trainer(kgc_connector: Connector, sp_connector: Connector, edge_id: int):
     trainer = Trainer(
         key_generator=kgc_connector,
         service_provider=sp_connector,
-        token_path=os.path.join(Configs.DIR_OF_AUTH, "token", "edge.yml"),
+        token_path=os.path.join(Configs.DIR_OF_AUTH, "token", f"edge{edge_id}.yml"),
         model_length=Configs.MODEL_LENGTH,
         precision=Configs.PRECISION,
     )

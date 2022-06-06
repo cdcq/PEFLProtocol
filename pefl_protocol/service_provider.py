@@ -34,7 +34,8 @@ class ServiceProvider(BaseService, KeyRequester):
                  trainers_count: int, train_round: int,
                  time_out=10, max_connection=5,
                  precision=32, value_range_bits=16,
-                 logger: logging.Logger = None):
+                 logger: logging.Logger = None,
+                 mu_export_path: str = None):
 
         if logger is None:
             self.logger = make_logger('ServiceProvider')
@@ -52,12 +53,17 @@ class ServiceProvider(BaseService, KeyRequester):
         self.learning_rate = learning_rate
         self.precision = precision
         self.value_bits = value_range_bits
+        self.mu_export_path = mu_export_path
 
         self.init_model = init_model
         self.model = []
         self.gradient = [[] for _ in range(self.trainers_count)]
         self.model_x = []
         self.is_ready = False
+        self.round_number = 0
+        self.user_list = []
+        self.round_user = []
+        self.mu_table = []
 
         self.pkc = self.request_key(Protocols.GET_PKC)
         self.pkx = self.request_key(Protocols.GET_PKX)
@@ -77,6 +83,7 @@ class ServiceProvider(BaseService, KeyRequester):
             self.round(round_number)
 
     def round(self, round_number):
+        self.round_number = round_number
         self.logger.info('Round {0} is started, waiting for trainers ready.'.format(round_number))
 
         self.round_ready()
@@ -100,6 +107,8 @@ class ServiceProvider(BaseService, KeyRequester):
         self.logger.info('Start to distribute model.')
         self.distribute_model()
 
+        self.export_mu_table()
+
     def round_ready(self):
         """
 
@@ -112,12 +121,12 @@ class ServiceProvider(BaseService, KeyRequester):
         self.sock.listen(5)
 
         self.is_ready = False
-        ready_list = []
-        while len(ready_list) < self.trainers_count:
+        self.round_user = []
+        while len(self.round_user) < self.trainers_count:
             conn, address = self.sock.accept()
             msg = receive_obj(conn)
             if msg[MessageItems.PROTOCOL] != Protocols.ROUND_READY \
-                    or msg[MessageItems.USER] in ready_list:
+                    or msg[MessageItems.USER] in self.round_user:
                 msg = {
                     MessageItems.PROTOCOL: msg[MessageItems.PROTOCOL],
                     MessageItems.DATA: 'Error'
@@ -125,11 +134,14 @@ class ServiceProvider(BaseService, KeyRequester):
                 send_obj(conn, msg)
                 continue
 
-            ready_list.append(msg[MessageItems.USER])
+            self.round_user.append(msg[MessageItems.USER])
+
+            if msg[MessageItems.USER] not in self.user_list:
+                self.user_list.append(msg[MessageItems.USER])
 
             msg = {
                 MessageItems.PROTOCOL: Protocols.ROUND_READY,
-                MessageItems.DATA: len(ready_list) - 1  # This is the id for this user.
+                MessageItems.DATA: len(self.round_user) - 1  # This is the id for this user.
             }
             send_obj(conn, msg)
 
@@ -326,6 +338,9 @@ class ServiceProvider(BaseService, KeyRequester):
             #     self.model[j] = self.model[j] - fx[i][j]
             self.model = arr_sub(self.model, fx[i])
 
+        mu = data['mu']
+        self.mu_table.append(mu)
+
         msg = {
             MessageItems.PROTOCOL: Protocols.SEC_AGG,
             MessageItems.DATA: 'OK'
@@ -409,3 +424,11 @@ class ServiceProvider(BaseService, KeyRequester):
                 conn.close()
             else:
                 self.logger.warning('Require model ended incorrectly.')
+
+    def export_mu_table(self):
+        if self.mu_export_path is None:
+            return
+        with open(self.mu_export_path, 'w') as f:
+            f.write('round, ' + ', '.join(self.user_list) + '\n')
+            for i in range(len(self.mu_table)):
+                f.write(str(i) + ', ' + ', '.join([str(j) for j in self.mu_table[i]]) + '\n')

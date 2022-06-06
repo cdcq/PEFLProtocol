@@ -237,11 +237,13 @@ class CloudProvider(BaseService, KeyRequester):
             MessageItems.DATA: {
                 'ex': [gen_cipher_arr(i) for i in ec],
                 # "k" here is plain text!
-                'k': k
+                'k': k,
+                'mu': self.mu
             }
         }
-        self.logger.info('SecAgg: the mu is\n{}'.format(self.mu))
         send_obj(conn, msg)
+
+        self.logger.info('SecAgg: the mu is\n{}'.format(self.mu))
 
     def exchange_handler(self, conn: ssl.SSLSocket):
         """

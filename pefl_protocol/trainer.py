@@ -14,6 +14,7 @@ for i in range(round_count):
 """
 
 import logging
+import yaml
 from phe import paillier
 from hashlib import md5
 from random import getrandbits
@@ -37,6 +38,8 @@ class Trainer(KeyRequester):
         KeyRequester.__init__(self, key_generator, token_path)
 
         self.service_provider = service_provider
+        # TODO: improve the authentication system.
+        self.token_path = token_path
         self.model_length = model_length
         self.precision = precision
         self.value_bits = value_range_bits
@@ -45,7 +48,6 @@ class Trainer(KeyRequester):
         self.pkc = self.request_key(Protocols.GET_PKC)
         self.skx = self.request_key(Protocols.GET_SKX)
 
-        self.user_name = md5(getrandbits(1024).to_bytes(1024, 'big')).hexdigest()
         self.round_id = -1
         self.gradient = []
 
@@ -58,6 +60,11 @@ class Trainer(KeyRequester):
                                Configs.KEY_LENGTH, Configs.IF_PACKAGE)
         self.enc_x = Encryptor(self.skx.public_key, self.skx, self.precision, self.value_bits,
                                Configs.KEY_LENGTH, Configs.IF_PACKAGE)
+
+        with open(self.token_path, 'r') as f:
+            token_data = f.read()
+        token_data = yaml.safe_load(token_data)
+        self.user_name = token_data['User']
 
     def round_run(self, gradient: [float]) -> [float]:
         self.logger.info('A new round is started. User name: {0}.'.format(self.user_name))

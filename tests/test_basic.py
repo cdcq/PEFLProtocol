@@ -73,6 +73,7 @@ def make_sp(kgc_connector: Connector, cp_connector: Connector) -> ServiceProvide
         model_length=Configs.MODEL_LENGTH,
         time_out=Configs.TIME_OUT,
         precision=Configs.PRECISION,
+        mu_export_path='./temp_data/mu_table.csv'
     )
     return sp
 

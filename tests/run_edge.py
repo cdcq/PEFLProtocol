@@ -16,11 +16,11 @@ from ML_utils.poison import exec_poisoning
 from ML_utils.test import test_model
 
 if __name__ == "__main__":
+    edge_id = int(sys.argv[1])
     kgc_connector = make_kgc_connector()
     sp_connector = make_sp_connector()
-    edge = make_trainer(kgc_connector, sp_connector)
+    edge = make_trainer(kgc_connector, sp_connector, edge_id)
 
-    edge_id = int(sys.argv[1])
     model = get_model(model_name=Configs.MODEL_NAME, device=Configs.DEVICE)
     # 统一初始化
     with open(os.path.join("init_weights_vectors", f"task_{Configs.TASK}.txt"), 'r') as read_file:

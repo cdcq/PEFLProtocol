@@ -118,7 +118,7 @@ class ServiceProvider(BaseService, KeyRequester):
         :return: None.
         """
 
-        self.sock.listen(5)
+        self.sock.listen(10)
 
         self.is_ready = False
         self.round_user = []

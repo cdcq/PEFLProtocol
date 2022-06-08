@@ -8,7 +8,7 @@ from time import sleep, time
 from test_basic import Configs, make_kgc_connector, make_sp_connector, make_cp_connector, \
     make_sp, make_cp, make_trainer
 
-test_mgn = 1000
+test_mgn = 10000
 
 Configs.TRAINERS_COUNT = 1
 Configs.MODEL_LENGTH = 10 * test_mgn
@@ -19,7 +19,7 @@ sp_connector = make_sp_connector()
 sp = make_sp(kgc_connector, cp_connector)
 cp = make_cp(kgc_connector)
 
-tr = make_trainer(kgc_connector, sp_connector)
+tr = make_trainer(kgc_connector, sp_connector, edge_id=0)
 
 model = [0.013801388442516327, -0.02055473066866398, 0.017501456663012505, 0.0080514345318079, -0.019214686006307602,
          -0.004485428333282471, 0.019524699077010155, 0.004331077914685011, 0.01430246327072382, 0.01712757907807827] \

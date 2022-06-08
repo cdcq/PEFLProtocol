@@ -38,7 +38,7 @@ if __name__ == "__main__":
         for edge_id in range(Configs.TRAINERS_COUNT):
             de_flatten(vector=weights_vector, model=model)
             if exec_poisoning(round_id=round_id, edge_id=edge_id,
-                              trainer_count=Configs.TRAINERS_COUNT, poison_freq=1, start_round=2):
+                              trainer_count=Configs.TRAINERS_COUNT, poison_freq=1, start_round=3):
             # if 1 == 0:
                 grads_list, local_loss = poison_local_update(model=model, dataloader=edge_dataloaders[edge_id],
                                                              trainer_count=Configs.TRAINERS_COUNT,
@@ -70,6 +70,6 @@ if __name__ == "__main__":
                            {"Normal": acc_normal, "Poison": acc_poison},
                            round_id)
 
-        if round_id % 5 == 0:
-            model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id}.pt")
+        if (round_id + 1) % 10 == 0:
+            model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id + 1}.pt")
             torch.save(model.state_dict(), model_save_path)

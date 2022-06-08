@@ -432,6 +432,7 @@ class ServiceProvider(BaseService, KeyRequester):
         if self.mu_export_path is None:
             return
         with open(self.mu_export_path, 'w') as f:
+            self.user_list.sort()
             f.write('round, ' + ', '.join(self.user_list) + '\n')
             for i in range(len(self.mu_table)):
                 f.write(str(i) + ', ' + ', '.join([str(j) for j in self.mu_table[i]]) + '\n')

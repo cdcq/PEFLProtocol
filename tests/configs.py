@@ -17,7 +17,7 @@ CALCULATE_MODEL_LENGTH = {
     "mlp": 633226,
     "lenet_mnist": 61706,
     "lenet_cifar10": 62006,
-    "resnet19_CNNDetect": 11177538,
+    "resnet18_CNNDetect": 11177538,
 }
 
 

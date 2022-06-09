@@ -33,7 +33,7 @@ class Trainer(KeyRequester):
                  token_path: str,
                  model_length: int,
                  precision=32, value_range_bits=16,
-                 wait_time=5,
+                 wait_time=10,
                  logger: logging.Logger = None):
         KeyRequester.__init__(self, key_generator, token_path)
 
@@ -55,6 +55,9 @@ class Trainer(KeyRequester):
             self.logger = make_logger('Trainer')
         else:
             self.logger = logger
+
+        self.service_provider.logger = self.logger
+        self.key_generator.logger = self.logger
 
         self.enc_c = Encryptor(self.pkc, None, self.precision, self.value_bits,
                                Configs.KEY_LENGTH, Configs.IF_PACKAGE)
@@ -110,7 +113,7 @@ class Trainer(KeyRequester):
     def get_model(self) -> [float]:
         sleep(self.wait_time)
         while True:
-            conn = self.service_provider.start_connect(wait_time=10)
+            conn = self.service_provider.start_connect(wait_time=self.wait_time)
             msg = {
                 MessageItems.PROTOCOL: Protocols.GET_MODEL,
                 MessageItems.USER: self.user_name

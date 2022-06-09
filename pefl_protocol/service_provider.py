@@ -45,8 +45,13 @@ class ServiceProvider(BaseService, KeyRequester):
         BaseService.__init__(self, listening, cert_path, key_path,
                              time_out, max_connection, logger=self.logger)
         KeyRequester.__init__(self, key_generator, token_path)
+        self.key_generator.logger = self.logger
 
         self.cloud_provider = cloud_provider
+
+        # TODO: use a more appropriate way to set logger.
+        self.cloud_provider.logger = self.logger
+
         self.model_length = model_length
         self.trainers_count = trainers_count
         self.train_round = train_round

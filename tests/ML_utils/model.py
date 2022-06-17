@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from torch.functional import F
-# from ML_utils.resnet_cifar import ResNet18, ResNet
 
 
 def get_model(model_name="mlp",
@@ -23,23 +22,18 @@ def get_model(model_name="mlp",
 
     return model
 
-
 class MLP(nn.Module):
-    def __init__(self, name=None, created_time=None):
+    def __init__(self):
         super(MLP, self).__init__()
-        self.created_time = created_time
-        self.name = name
-
-        dim_in = 784
-        dim_out = 10
-
-        self.layer_input = nn.Linear(dim_in, 512)
+        self.dim_in = 784
+        self.dim_out = 10
+        self.layer_input = nn.Linear(self.dim_in, 512)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout()
         self.layer_hidden1 = nn.Linear(512, 256)
         self.layer_hidden2 = nn.Linear(256, 256)
         self.layer_hidden3 = nn.Linear(256, 128)
-        self.layer_out = nn.Linear(128, dim_out)
+        self.layer_out = nn.Linear(128, self.dim_out)
         self.softmax = nn.Softmax(dim=1)
         self.weight_keys = [['layer_input.weight', 'layer_input.bias'],
                             ['layer_hidden1.weight', 'layer_hidden1.bias'],
@@ -64,7 +58,6 @@ class MLP(nn.Module):
 
         x = self.layer_out(x)
         return self.softmax(x)
-
 class LeNetMnist(nn.Module):
     def __init__(self):
         super(LeNetMnist, self).__init__()

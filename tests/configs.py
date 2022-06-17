@@ -35,13 +35,15 @@ class Configs:
     MODEL_NAME = MODEL[TASK]
     MODEL_LENGTH = CALCULATE_MODEL_LENGTH[MODEL_NAME]
     TRAINERS_COUNT = 5
+    ALPHA = 0.8
+    SENSITIVITY = 0.6
 
     MAX_ROUND = 200
     LEARNING_RATE = 0.01
     CUDA_CHOICES = [i for i in range(torch.cuda.device_count())]
     # DEVICE = torch.device(f"cuda:{choice(CUDA_CHOICES)}") \
     #     if torch.cuda.is_available() else torch.device("cpu")
-    DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    DEVICE = torch.device("cuda:4") if torch.cuda.is_available() else torch.device("cpu")
     BATCH_SIZE = 32
     POISON_SWAP_LABEL = 1
     SHOW_EDGE_ID = 0

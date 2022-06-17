@@ -43,11 +43,11 @@ if __name__ == "__main__":
     if not os.path.exists("init_weights_vectors"):
         os.mkdir("init_weights_vectors")
 
-    model = get_model(Configs.MODEL_NAME)
+    model = get_model(Configs.MODEL_NAME, device=Configs.DEVICE)
     init_weights_vector = flatten(model.parameters())
 
 
-    with open(os.path.join("init_weights_vectors", f"task_{Configs.TASK}.txt"), 'w') as write_file:
+    with open(os.path.join("init_weights_vectors", f"{Configs.MODEL_NAME}.txt"), 'w') as write_file:
         json.dump(init_weights_vector, write_file)
 
     print("Finished writting init model in task:", Configs.TASK)

@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     model = get_model(model_name=Configs.MODEL_NAME, device=Configs.DEVICE)
     # 统一初始化
-    with open(os.path.join("init_weights_vectors", f"task_{Configs.TASK}.txt"), 'r') as read_file:
+    with open(os.path.join("init_weights_vectors", f"{Configs.MODEL_NAME}.txt"), 'r') as read_file:
         init_weights_vector = json.load(read_file)
     de_flatten(vector=init_weights_vector, model=model)
 
@@ -37,10 +37,11 @@ if __name__ == "__main__":
         writer = SummaryWriter(log_dir=f"runs/task_{Configs.TASK}", flush_secs=60)
         writer.add_graph(model=model, input_to_model=next(iter(test_dataloader))[0].to(Configs.DEVICE))
 
-    for round_id in range(1, Configs.MAX_ROUND + 1):
+    for round_id in range(Configs.MAX_ROUND):
         if exec_poisoning(round_id=round_id, edge_id=edge_id, trainer_count=Configs.TRAINERS_COUNT,
                           poison_freq=1, start_round=2):
-            grads_list, local_loss = poison_local_update(model=model, dataloader=train_dataloader,
+            grads_list, local_loss = poison_local_update(model=model, previous_weights_vector=weights_vector,
+                                                         dataloader=train_dataloader, alpha=Configs.ALPHA,
                                                          trainer_count=Configs.TRAINERS_COUNT, edge_id=edge_id,
                                                          round_id=round_id, task=Configs.TASK)
         else:
@@ -67,6 +68,6 @@ if __name__ == "__main__":
                                {"Normal": acc_normal, "Poison": acc_poison},
                                round_id)
 
-            if round_id % 5 == 0:
-                model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id}.pt")
+            if (round_id+1) % 5 == 0:
+                model_save_path = os.path.join("saved", "models", f"task_{Configs.TASK}", f"round_{round_id+1}.pt")
                 torch.save(model.state_dict(), model_save_path)

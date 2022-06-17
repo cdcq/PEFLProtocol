@@ -13,7 +13,6 @@ def exec_poisoning(round_id: int, edge_id: int, trainer_count: int, poison_freq:
 
     return False
 
-
 def get_poison_batch(batch, task, adversarial_index=-1, evaluation=False, poison_label_swap=1,
                      poison_frac_per_batch=0.5, save_flag=1):
     images, targets = batch

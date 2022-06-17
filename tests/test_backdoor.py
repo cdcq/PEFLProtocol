@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     for round_id in range(1, Configs.MAX_ROUND + 1):
         grads_vector_sum = [.0] * Configs.MODEL_LENGTH
-
+        grads_vectots = []
         for edge_id in range(Configs.TRAINERS_COUNT):
             de_flatten(vector=weights_vector, model=model)
             if exec_poisoning(round_id=round_id, edge_id=edge_id,
@@ -49,15 +49,22 @@ if __name__ == "__main__":
                                                       edge_id=edge_id, round_id=round_id)
 
             grads_vector = flatten(yield_accumulated_grads(grads_list))
+
+
             for dimension in range(Configs.MODEL_LENGTH):
                 grads_vector_sum[dimension] += grads_vector[dimension]
-        
+
+        # 聚合协议
         for dimension in range(Configs.MODEL_LENGTH):
             grads_vector_sum[dimension] /= Configs.TRAINERS_COUNT
             weights_vector[dimension] -= Configs.LEARNING_RATE * grads_vector_sum[dimension]
-     
-        de_flatten(vector=weights_vector, model=model)
 
+
+
+
+
+
+        de_flatten(vector=weights_vector, model=model)
         loss_normal, acc_normal = test_model(model=model, test_dataloader=test_dataloader, loss_fn=loss_fn,
                                              device=Configs.DEVICE, epoch=round_id, is_poison=False, task=Configs.TASK)
         loss_poison, acc_poison = test_model(model=model, test_dataloader=test_poison_dataloader, loss_fn=loss_fn,

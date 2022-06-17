@@ -29,12 +29,6 @@ Transform_CUS = {
     ])
 }
 
-
-# trans_cifar10 = transforms.Compose([transforms.ToTensor(),
-#                                         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
-
-
-
 def transform_invert(img, task):
     """
     将data 进行反transfrom操作,并保存图像
@@ -47,16 +41,6 @@ def transform_invert(img, task):
         mean = torch.tensor(norm_transform[0].mean, dtype=img.dtype, device=img.device)
         std = torch.tensor(norm_transform[0].std, dtype=img.dtype, device=img.device)
         new_img = img.mul(std[:, None, None]).add(mean[:, None, None])
-
-    # img = img.transpose(0, 2).transpose(0, 1)  # C*H*W --> H*W*C
-    # img = np.array(img) * 255
-    #
-    # if img.shape[2] == 3:
-    #     img = Image.fromarray(img.astype('uint8')).convert('RGB')
-    # elif img.shape[2] == 1:
-    #     img = Image.fromarray(img.astype('uint8').squeeze())
-    # else:
-    #     raise Exception("Invalid img shape, expected 1 or 3 in axis 2, but got {}!".format(img.shape[2]))
 
     return new_img
 
@@ -87,22 +71,6 @@ class CNNDection(Dataset):
             label = self.target_transform(label)
         return image, label
 
-# def get_train_dataset(dataset='mnist', iid=True):
-#     edge_dataset = None
-#     if dataset == 'mnist':
-#         train_dataset = datasets.MNIST('data/mnist/', train=True, download=True, transform=trans_mnist)
-#
-#     elif dataset == 'cifar':
-#         train_dataset = datasets.CIFAR10('data/cifar10', train=True, download=True, transform=trans_cifar10)
-#
-#     elif dataset == "CNNDetection":
-#         train_dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
-#
-#     if iid:
-#         num_items = int(len(train_dataset) * 0.3)
-#         idxs = iid_sampling(train_dataset, num_items)
-#         edge_dataset = Subset(train_dataset, list(idxs))
-#         return edge_dataset
 
 def poison_test_idx(test_dataset ,poison_label_swap=1) -> [int]:
     # delete the test data with target label
@@ -112,7 +80,6 @@ def poison_test_idx(test_dataset ,poison_label_swap=1) -> [int]:
             leaved_idxs.append(idx)
 
     return leaved_idxs
-
 
 class DatasetSource:
     def __init__(self, dataset_name, poison_label_swap=1):
@@ -144,23 +111,6 @@ class DatasetSource:
         return DataLoader(self.poison_test_dataset, batch_size=32, shuffle=True)
 
 
-
-# def get_test_dataset(dataset="mnist"):
-#     if dataset == "mnist":
-#         test_dataset = datasets.MNIST('data/mnist', train=False, download=True, transform=trans_mnist)
-#
-#     elif dataset == 'cifar':
-#         test_dataset = datasets.CIFAR10('data/cifar10', train=False, download=True, transform=trans_cifar10)
-#
-#     elif dataset == "CNNDetection":
-#         test_dataset = CNNDection(img_dir=os.path.join("data", "CNNDetection"))
-#
-#     num_items = int(len(test_dataset) * 0.4)
-#     idxs = iid_sampling(test_dataset, num_items)
-#     edge_dataset = Subset(test_dataset, list(idxs))
-#     return edge_dataset
-
-
 def iid_sampling(dataset, num_items):
     """
     Sample I.I.D. client data from MNIST dataset
@@ -170,41 +120,3 @@ def iid_sampling(dataset, num_items):
     """
     all_idxs = [i for i in range(len(dataset))]
     return set(np.random.choice(all_idxs, num_items, replace=True))
-
-
-# def get_train_old(all_range, model_no,dataname):
-#     """
-#     This method equally splits the dataset.
-#     :param params:
-#     :param all_range:
-#     :param model_no:
-#     :return:
-#     """
-#     if dataname=='mnist':
-#
-#         data_len = int(len(train_dataset) / 100)
-#         sub_indices = all_range[model_no * data_len: (model_no + 1) * data_len]
-#         train_loader = torch.utils.data.DataLoader(train_dataset,
-#                                             batch_size=64,
-#                                             sampler=torch.utils.data.sampler.SubsetRandomSampler(
-#                                                 sub_indices))
-#     elif dataname=='cifar':
-#         data_len = int(len(train_dataset_cifar) / 100)
-#         sub_indices = all_range[model_no * data_len: (model_no + 1) * data_len]
-#         train_loader = torch.utils.data.DataLoader(train_dataset_cifar,
-#                                             batch_size=64,
-#                                             sampler=torch.utils.data.sampler.SubsetRandomSampler(
-#                                                 sub_indices))
-#
-#     return train_loader
-#
-# def load_data(datasetnme):
-#     if datasetnme=='mnist':
-#         ## sample indices for participants that are equally
-#         all_range = list(range(len(train_dataset)))
-#     elif datasetnme=='cifar':
-#         all_range = list(range(len(train_dataset_cifar)))
-#     random.shuffle(all_range)
-#     train_loaders = [(pos, get_train_old(all_range, pos,datasetnme))
-#                         for pos in range(100)]
-#     return(train_loaders)

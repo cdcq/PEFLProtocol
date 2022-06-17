@@ -5,6 +5,7 @@ tests/.idea/
 tests/data/
 tests/saved/
 tests/runs/
+tests/results_for_diff/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

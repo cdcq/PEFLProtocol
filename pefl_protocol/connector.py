@@ -44,11 +44,11 @@ class Connector:
                 break
             except ConnectionRefusedError:
                 self.logger.info('Connection has been refused. Trying to reconnect.')
-                sleep(wait_time * (0.5 + 0.5 * random()))
+                sleep(wait_time + random() * wait_time)
                 continue
             except TimeoutError:
                 self.logger.info('Connection is timeout. Trying to reconnect.')
-                sleep(wait_time * (0.5 + 0.5 * random()))
+                sleep(wait_time + random() * wait_time)
                 continue
 
         return self.context.wrap_socket(conn)

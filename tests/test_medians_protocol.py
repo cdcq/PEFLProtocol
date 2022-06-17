@@ -4,9 +4,9 @@ from time import time
 
 from test_basic import Configs, make_kgc_connector, make_cp_connector, make_sp, make_cp
 
-Configs.TRAINERS_COUNT = 10
+Configs.TRAINERS_COUNT = 1000
 # Configs.TRAINERS_COUNT = 9
-Configs.MODEL_LENGTH = 10000
+Configs.MODEL_LENGTH = 10
 
 kgc_connector = make_kgc_connector()
 cp_connector = make_cp_connector()

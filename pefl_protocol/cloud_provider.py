@@ -45,6 +45,8 @@ class CloudProvider(BaseService, KeyRequester):
                              time_out, max_connection, logger=self.logger)
         KeyRequester.__init__(self, key_generator, token_path)
 
+        self.key_generator.logger = self.logger
+
         self.precision = precision
         self.value_bits = value_range_bits
 
